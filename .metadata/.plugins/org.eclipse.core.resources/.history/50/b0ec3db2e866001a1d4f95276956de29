@@ -1,0 +1,19 @@
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+
+	public static void main(String[] args) {
+		List<Integer> intList = new ArrayList<Integer>();
+		intList.add(1);
+		
+//		System.out.println(intList);
+		
+		System.out.println(Math.round((Math.sqrt(49)+5 )));
+		System.out.println(Math.round((Math.sqrt(49))));
+		
+//		System.out.println("Hey what are you doing".split(" ").length);
+		
+	}
+
+}

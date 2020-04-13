@@ -1,0 +1,50 @@
+import java.io.IOException;
+import java.util.Scanner;
+
+public class ClimbingLeaderboard {
+
+    // Complete the climbingLeaderboard function below.
+    static int[] climbingLeaderboard(int[] scores, int[] alice) {
+    	int [] ranks  = new int[scores.length];
+    	int [] aliceRanks  = new int[alice.length];
+    	
+    	int endIndex = -1;
+    	int currentElement = Integer.MIN_VALUE;
+    	
+    	for (int i = 0; i < ranks.length; i++) {
+			if (currentElement != scores[i]) {
+				ranks[++endIndex] = scores[i];
+			}
+		}
+    	
+    	int aliceEndIndex = 0;
+    	for (int i = 0; i < aliceRanks.length; i++) {
+			aliceRanks[++aliceEndIndex] = binarySearch(ranks, alice[i], 0, endIndex) + 1; 
+		}
+    	
+    	return aliceRanks;
+    }
+    
+    private static int binarySearch(int[] inputArr, int ele, int start, int end) {
+    	int mid = (start+end)/2;
+    	if (inputArr[mid] == ele) {
+			return mid;
+		}else if(start == end) {
+			// This means the number if not present. 
+			return start;
+		}else if(ele > inputArr[mid]) {
+			return binarySearch(inputArr, ele, start, mid);
+		}else {
+			return binarySearch(inputArr, ele, mid+1, end);
+			
+		}
+	}
+
+    private static final Scanner scanner = new Scanner(System.in);
+
+    public static void main(String[] args) throws IOException {
+        int[] result = climbingLeaderboard(new int [] {}, new int[] {});
+        
+        System.out.println(result);
+    }
+}

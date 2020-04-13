@@ -1,0 +1,24 @@
+public class NewYearChaos {
+
+	// Complete the minimumBribes function below.
+	static void minimumBribes(int[] q) {
+		int index = 1;
+		int skipIndexes;
+		int bribes = 0;
+		
+		while (index <= q.length) {
+			skipIndexes = 0;
+			if (q[index - 1] > index) {
+				skipIndexes = q[index] - index;
+				bribes+=skipIndexes;
+			}
+		}
+	}
+
+	public static void main(String[] args) {
+
+		int[] q = new int[] { 1, 2 };
+
+		minimumBribes(q);
+	}
+}

@@ -1,0 +1,68 @@
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.Queue;
+
+public class DownToZeroII {
+
+	/*
+	 * Complete the downToZero function below.
+	 */
+	static int downToZero(int n) {
+		int minMoves = 0;
+		Queue<Integer> q = new LinkedList<Integer>();
+		q.add(n);
+
+		return makeZero(minMoves, );
+	}
+	
+	private static int makeZero(int numMoves, Queue<Integer> q) {
+		int currNum = q.remove();
+
+		if (currNum==0) {
+			return numMoves;
+		}
+		
+		q.add(currNum-1);
+		
+		int divisor = isPrime(currNum);
+		if (divisor != currNum) {
+			currNum = currNum / divisor;
+			q.add(currNum);
+		}
+		
+		return makeZero(numMoves++, q);
+	}
+
+	private static int isPrime(int n) {
+		int minDiv = 0;
+		int min = Integer.MAX_VALUE;
+		boolean isPrime = true;
+
+		for (int i = 2; i <= n / 2; i++) {
+			if (n % i == 0) {
+				int diff = (n / i) - i;
+				if (diff < 0) {
+					break;
+				} else if (diff < min) {
+					min = diff;
+					minDiv = i;
+					isPrime = false;
+				}
+			}
+		}
+
+		if (isPrime) {
+			return n;
+		} else {
+			return minDiv;
+		}
+
+	}
+
+	public static void main(String[] args) throws IOException {
+
+//		System.out.println(downToZero(966514));
+//		System.out.println(downToZero(812849));
+		System.out.println(downToZero(94));
+	}
+}

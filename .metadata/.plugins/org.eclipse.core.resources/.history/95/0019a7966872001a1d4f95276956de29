@@ -1,0 +1,37 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
+
+public class Test {
+
+	public static void main(String[] args) {
+		List<Integer> intList = new ArrayList<Integer>();
+		intList.add(1);
+
+//		System.out.println(intList);
+
+//		System.out.println(Math.round((Math.sqrt(49) + 0.5)));
+//		System.out.println(Math.round((Math.sqrt(49))));
+
+//		for (int i = 0; i < 10; i++) {
+//			System.out.println(i%2);
+//		}
+
+//		int n = 812848;
+//		for (int i = 2; i < n; i++) {
+//			if (n % i == 0) {
+//				System.out.println(i + ", " + n / i);
+//			}
+//		}
+//		
+//		System.out.println("Sqrt of ["+n+"] is "+Math.sqrt(n));
+		
+		System.out.println(Integer.MAX_VALUE);
+		
+		
+
+//		System.out.println("Hey what are you doing".split(" ").length);
+
+	}
+
+}

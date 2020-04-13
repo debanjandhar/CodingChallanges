@@ -1,0 +1,107 @@
+package com.odc.pricemng.fintechpricemanagerapi.controllers;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.odc.pricemng.exception.APIException;
+import com.odc.pricemng.fintechpricemanagerapi.entities.RequestParams;
+import com.odc.pricemng.fintechpricemanagerapi.services.AbstractService;
+
+@RestController
+@RequestMapping("/pricemanager")
+public abstract class AbstractController<T> {
+
+	@RequestMapping(method = RequestMethod.GET, produces = { "application/json" })
+	@ResponseBody
+	public ResponseEntity<?> get(@RequestHeader("uKey") String uKey, @RequestHeader(value = "pKey") String pKey,
+			@RequestHeader("application") String application,
+			@RequestHeader(value = "page", required = false) Integer page,
+			@RequestHeader(value = "pageSize", required = false) Integer pageSize,
+			@RequestHeader(value = "orderBy", required = false, defaultValue = "activeTimestamp") String orderBy,
+			@RequestHeader(value = "order", required = false, defaultValue = "desc") String order,
+			@RequestParam(value = "rowNumber") Optional<Long> rowNumber) throws APIException {
+		RequestParams requestParams = new RequestParams(uKey, pKey, application);
+		requestParams.setOrderBy(StringUtils.isBlank(orderBy) ? getOrderBy() : orderBy);
+		requestParams.setOrder(StringUtils.isBlank(order) ? getOrder() : order);
+		requestParams.setPage(page == null ? getPage() : page);
+		requestParams.setPageSize(pageSize == null ? getPageSize() : pageSize);
+		requestParams.setSearchFor(rowNumber.isPresent() ? rowNumber.get() : null);
+		try {
+			List<T> output = getService().get(requestParams);
+			return new ResponseEntity<>(output, HttpStatus.OK);
+		} catch (APIException e) {
+			throw e;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	@RequestMapping(method = RequestMethod.POST, consumes = { "application/json" }, produces = { "application/json" })
+	@ResponseBody
+	public ResponseEntity<?> create(@RequestHeader("uKey") String uKey, @RequestHeader(value = "pKey") String pKey,
+			@RequestHeader("application") String application, @RequestBody T request) throws APIException {
+		RequestParams requestParams = new RequestParams(uKey, pKey, application);
+		try {
+			T output = getService().create(requestParams);
+			return new ResponseEntity<>(output, HttpStatus.CREATED);
+		} catch (APIException e) {
+			throw e;
+		} catch (Exception e) {
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		}
+	}
+
+	@RequestMapping(method = RequestMethod.PUT, consumes = { "application/json" }, produces = { "application/json" })
+	@ResponseBody
+	public ResponseEntity update(@RequestHeader("uKey") String uKey, @RequestHeader(value = "pKey") String pKey,
+			@RequestHeader("application") String application, @RequestBody T t) {
+
+		if (t == null) {
+			return null;
+		}
+		RequestParams requestParams = new RequestParams(uKey, pKey, application);
+		try {
+			List<T> output = getService().update(requestParams);
+			return new ResponseEntity<>(output, HttpStatus.OK);
+		} catch (APIException e) {
+			throw e;
+		} catch (Exception e) {
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		}
+	}
+
+	@RequestMapping(value = "{rowNumber}", method = RequestMethod.DELETE, produces = { "application/json" })
+	@ResponseBody
+	public ResponseEntity delete(@RequestHeader("uKey") String uKey, @RequestHeader(value = "pKey") String pKey,
+			@RequestHeader("application") String application, @PathVariable Long rowNumber) {
+		RequestParams requestParams = new RequestParams(uKey, pKey, application);
+		try {
+			T output = getService().delete(requestParams);
+			return new ResponseEntity<>(output, HttpStatus.OK);
+		} catch (Exception e) {
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		}
+	}
+
+	protected abstract AbstractService<T> getService();
+
+	protected abstract String getOrderBy();
+
+	protected abstract String getOrder();
+
+	protected abstract Integer getPageSize();
+
+	protected abstract Integer getPage();
+}

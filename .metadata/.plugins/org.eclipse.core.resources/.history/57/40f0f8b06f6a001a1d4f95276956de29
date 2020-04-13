@@ -1,0 +1,43 @@
+public class IsThisBinarySearchTree {
+	/*
+	 * Hidden stub code will pass a root argument to the function below. Complete
+	 * the function to solve the challenge. Hint: you may want to write one or more
+	 * helper functions.
+	 * 
+	 * The Node class is defined as follows: class Node { int data; Node left; Node
+	 * right; }
+	 */
+	boolean checkBST(Node root) {
+		boolean isBinaryTree = true;
+		
+		return isBinaryTree;
+	}
+	
+	private boolean isBST(Node currNode) {
+		if (currNode ==  null) {
+			return true;
+		}else if(){
+		}elseif(isBST(currNode.left) && currNode.right)){
+			
+		}else {
+			return false;
+		}
+		
+	}
+
+	public static void main(String[] args) {
+
+	}
+
+	private class Node {
+		int data;
+		Node left;
+		Node right;
+
+		public Node(Node left, Node right, int data) {
+			this.data = data;
+			this.left = left;
+			this.right = right;
+		}
+	}
+}

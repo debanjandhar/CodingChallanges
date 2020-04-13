@@ -1,0 +1,34 @@
+package com.oracle.odc.metis.driver;
+import org.apache.spark.sql.SparkSession;
+
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+
+public class ConvertParqToCSV {
+
+	public static void main(String[] args) {
+
+		SparkSession ss = createSparkSession("dev");
+
+//		String readPath = "/Users/debanjandhar/workspace/softwares/DataFlow/input_files/part-00000-c8a69cad-144c-4fa8-9ef3-c329875febd8-c000.snappy.parquet";
+//		String writePath = "/Users/debanjandhar/workspace/softwares/DataFlow/input_files/parqOutput";
+//		String readPath = "/Users/debanjandhar/workspace/softwares/DataFlow/input_files/parqOutput";
+		String readPath = "/Users/debanjandhar/Downloads/rate_cards";
+		String writePath = "/Users/debanjandhar/Downloads/rate_cards/csv";
+
+//		ss.read().parquet(readPath).limit(20).write().parquet(writePath);;
+//		ss.read().parquet(readPath).show(30);
+		
+		ss.read().json(readPath).write().option("header", true).option("delimiter", ",").format("com.databricks.spark.csv").save(writePath);
+
+	}
+
+	public static SparkSession createSparkSession(String env) {
+		Config appConfig = ConfigFactory.load();
+		SparkSession sparkSession = SparkSession.builder().appName(appConfig.getString("spark.appName")).master("local")
+				.getOrCreate();
+		return sparkSession;
+	}
+
+}
+

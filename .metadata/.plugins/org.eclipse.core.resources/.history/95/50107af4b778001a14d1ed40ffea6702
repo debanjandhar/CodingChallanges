@@ -1,0 +1,12 @@
+package com.odc.pricemng.fintechpricemanagerapi.controllers;
+
+import javax.ws.rs.GET;
+
+import org.springframework.data.repository.CrudRepository;
+
+public abstract class AbstractController<T> {
+	
+	protected abstract CrudRepository getRepository();
+	
+	GET
+}

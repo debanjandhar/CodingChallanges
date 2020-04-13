@@ -1,0 +1,814 @@
+package com.odc.revrecAPI.service;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.TimeZone;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.odc.revrecAPI.bos.ErrorsTableVo;
+import com.odc.revrecAPI.bos.FileLevelFields;
+import com.odc.revrecAPI.bos.FileUploadDownloadBO;
+import com.odc.revrecAPI.bos.FileUploadStatusBo;
+import com.odc.revrecAPI.bos.StatusBO;
+import com.odc.revrecAPI.bos.UploadSplitterFields;
+import com.odc.revrecAPI.bos.ViewErrorsResponse;
+import com.odc.revrecAPI.exceptions.RevRecException;
+import com.odc.revrecAPI.fileupload.helper.FileUploadDBOps;
+import com.odc.revrecAPI.fileupload.helper.Validator;
+import com.odc.revrecAPI.utils.AuthChecker;
+import com.odc.revrecAPI.utils.CasperClientUtility;
+import com.odc.revrecAPI.utils.Constants;
+import com.odc.revrecAPI.utils.DBUtility;
+import com.odc.revrecAPI.utils.EscapeUtils;
+import com.odc.revrecAPI.utils.FileUploadStatus;
+import com.odc.revrecAPI.utils.GenerateHash;
+import com.odc.revrecAPI.utils.GetStacktrace;
+
+@Component
+public class FileService {
+	private static final Logger logger = LogManager.getLogger(FileService.class);
+	// private static final DBUtility dbUtility = new DBUtility();
+	@Autowired
+	private DBUtility dbUtility;
+
+	@Autowired
+	private AuthChecker authChecker;
+
+	@Autowired
+	private ViewErrorsService viewErrorsService;
+
+	@Autowired
+	private AdminService adminService;
+
+	public ResponseEntity downloadFile(FileUploadDownloadBO requestBo) throws Exception {
+		logger.info(StringUtils.isBlank(requestBo.getEmailId()) ? "unknown user"
+				: requestBo.getEmailId() + "downloading file " + requestBo.getFileId());
+
+		StatusBO status = new StatusBO();
+		if (null == requestBo || requestBo.getFileId() == 0l) {
+			logger.debug("requestBo is inavlid" + requestBo + ".Request processing terminated");
+			throw new RevRecException(Constants.BAD_REQUEST_MSG, HttpStatus.BAD_REQUEST);
+		}
+		if (!authChecker.isAuthentic(requestBo.getuKey(), requestBo.getpKey())) {
+			logger.debug("Invalid User:" + requestBo + ".Request processing terminated");
+			throw new RevRecException(Constants.AUTH_FAILURE, HttpStatus.UNAUTHORIZED);
+		}
+		String role = authChecker.fetchRole(requestBo.getuKey(), requestBo.getpKey());
+		if (null == role || role.trim().isEmpty()) {
+			logger.debug("Invalid role:" + role + ".Request processing terminated");
+			throw new RevRecException(Constants.AUTH_FAILURE, HttpStatus.UNAUTHORIZED);
+		}
+		String filePath = null;
+		String emailID = null;
+		String fileName = null;
+		String fileNameDB = null;
+		Connection conn = null;
+		try {
+			conn = dbUtility.getConnection2();
+			PreparedStatement stmt = conn.prepareStatement(
+					"SELECT FILEPATH, EMAILID,FILENAME FROM FILES WHERE FILEID = ?", ResultSet.TYPE_SCROLL_INSENSITIVE,
+					ResultSet.CONCUR_READ_ONLY);
+			stmt.setLong(1, requestBo.getFileId());
+			ResultSet rs = stmt.executeQuery();
+			if (dbUtility.nrRowsResultSet(rs) != 1) {
+				logger.info(String.format("File does not exist on server.", requestBo.getFileId()));
+				throw new RevRecException(
+						"File '" + EscapeUtils.escapeHtml(String.valueOf(requestBo.getFileId()))
+								+ "' does not exist on this server. "
+								+ "Please upload this file on this server before downloading it.",
+						HttpStatus.BAD_REQUEST);
+			}
+
+			rs.next();
+			filePath = rs.getString("FILEPATH");
+			emailID = rs.getString("EMAILID");
+			fileNameDB = rs.getString("FILENAME");
+			fileName = filePath.substring(filePath.lastIndexOf('/')+1);
+			logger.debug("filePath:" + filePath + ",emailID:" + emailID + ",fileName:" + fileName);
+
+		} catch (SQLException e1) {
+			logger.error(GetStacktrace.getStacktraceString(e1));
+			throw new RevRecException(Constants.ERROR_MSG, HttpStatus.INTERNAL_SERVER_ERROR);
+		} finally {
+			try {
+				dbUtility.cleanUp(conn);
+			} catch (Exception e) {
+				logger.error("Error while connection cleanup");
+			}
+		}
+		if (role.equalsIgnoreCase(Constants.UPLOAD_ONLY)) {
+			if (null == emailID || !requestBo.getuKey().equals(GenerateHash.generateHash(emailID))) {
+				throw new RevRecException(Constants.AUTH_FAILURE, HttpStatus.UNAUTHORIZED);
+			}
+		}
+		try {
+			CasperClientUtility.downloadFromCasper(filePath, Constants.FILE_DOWNLOAD_LOC);
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			logger.error("Error downloading file:" + GetStacktrace.getStacktraceString(e1));
+			throw new RevRecException("File '" + EscapeUtils.escapeHtml(String.valueOf(requestBo.getFileId()))
+					+ "' does not exist on this server. "
+					+ "Please upload this file on this server before downloading it.", HttpStatus.BAD_REQUEST);
+		}
+
+		File retFile = new File(Constants.FILE_DOWNLOAD_LOC + fileName);
+
+		if (!retFile.getAbsoluteFile().exists()) {
+			throw new RevRecException("File '" + EscapeUtils.escapeHtml(String.valueOf(requestBo.getFileId()))
+					+ "' does not exist on this server. "
+					+ "Please upload this file on this server before downloading it.", HttpStatus.BAD_REQUEST);
+		}
+		try {
+			return ResponseEntity.ok()
+					.header("Content-Disposition",
+							"file; filename=\"" + EscapeUtils.escapeHtml(fileNameDB) + "\"")
+					.header("Access-Control-Expose-Headers", "Content-Disposition")
+					.contentType(MediaType.APPLICATION_OCTET_STREAM)
+					.body(new InputStreamResource(new FileInputStream(retFile)));
+		} catch (Exception e) {
+			logger.error(GetStacktrace.getStacktraceString(e));
+			status.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
+			status.setStatusMessage("Error while downloading file");
+			return new ResponseEntity<StatusBO>(status, status.getStatusCode());
+		}
+	}
+
+	public ResponseEntity uploadFile(FileUploadDownloadBO requestBo, MultipartFile file) throws Exception {
+		if (!authChecker.isAuthentic(requestBo.getuKey(), requestBo.getpKey())) {
+			logger.info("Invalid User,authentication failed");
+			throw new RevRecException(Constants.AUTH_FAILURE, HttpStatus.UNAUTHORIZED);
+		}
+		if ((boolean) adminService.checkForLock(requestBo).getBody()) {
+			logger.debug("User cannot perform opertaion since operation is locked.Request processing terminated");
+			throw new RevRecException("Operation is locked.Request processing terminated", HttpStatus.BAD_REQUEST);
+		}
+		String uploadedFileLocation = (requestBo.getLocation() == null || requestBo.getLocation().trim().isEmpty()
+				? Constants.CASPER_UPLOAD_LOC : requestBo.getLocation().trim() + "/") + file.getOriginalFilename();
+		logger.debug("uploadedFileLocation:" + uploadedFileLocation);
+		File tempDir = new File(uploadedFileLocation);
+		if (!tempDir.exists()) {
+			tempDir.mkdirs();
+		}
+
+		long partnerId = requestBo.getPartnerId();
+
+		logger.info("Creating FileDetails object");
+		FileDetails fileDetails = new FileDetails();
+		fileDetails.fileName = file.getOriginalFilename();
+		fileDetails.emailId = requestBo.getEmailId();
+		fileDetails.rateCardDate = new String(
+				(requestBo.getRateCardDate() == null || requestBo.getRateCardDate().trim().isEmpty() ? ""
+						: requestBo.getRateCardDate()));
+		fileDetails.status = FileUploadStatus.UPLOAD_IN_PROGRESS;
+		fileDetails.activityDate = requestBo.getActivityDate();
+		fileDetails.uploadLocation = uploadedFileLocation;
+		fileDetails.fileId = requestBo.getFileId();
+		fileDetails.partnerId = partnerId;
+		fileDetails.businessDivision = ((requestBo.getBusinessDivision() == null
+				|| requestBo.getBusinessDivision().trim().isEmpty()) ? fileDetails.businessDivision
+						: requestBo.getBusinessDivision().trim());
+		fileDetails.fileType = (requestBo.getFileType() == null || requestBo.getFileType().trim().isEmpty() ? ""
+				: requestBo.getFileType().trim());
+		logger.info("FileDetails object" + fileDetails);
+
+		upload(fileDetails, file.getInputStream());
+
+		int statusCode = HttpStatus.ACCEPTED.value();
+		String retMsg = "File Submitted for uploading.Check upload status with statusId: "+fileDetails.uploadStatusId;
+		StatusBO status = new StatusBO();
+		status.setStatusCode(HttpStatus.valueOf(statusCode));
+		status.setStatusMessage(retMsg);
+		return new ResponseEntity<StatusBO>(status, status.getStatusCode());
+	}
+
+	private class FileDetails {
+		@Override
+		public String toString() {
+			return "FileDetails [fileName=" + fileName + ", emailId=" + emailId + ", status=" + status
+					+ ", rateCardDate=" + rateCardDate + ", retMsg=" + retMsg + ", responseCode=" + responseCode
+					+ ", fileType=" + fileType + ", activityDate=" + activityDate + ", uploadLocation=" + uploadLocation
+					+ ", fileId=" + fileId + ", partnerId=" + partnerId + ", businessDivision=" + businessDivision
+					+ "]";
+		}
+
+		public String fileName;
+		public String emailId;
+		public FileUploadStatus status;
+		public String rateCardDate;
+		public String retMsg;
+		public int responseCode = 0;
+		public String fileType;
+
+		public String activityDate;
+		public String uploadLocation;
+		private long fileId = -1;
+		private long partnerId = -1;
+		private String businessDivision = Constants.BK_BD;
+		private long uploadStatusId = -1;
+		private FileUploadStatus uploadStatus;
+		public String errorFileLoc;
+	}
+
+	private void upload(FileDetails fileDetails, InputStream uploadedInputStream) throws RevRecException, SQLException {
+
+		FileDetails fd = fileDetails;
+
+		try {
+			File file = new File(fileDetails.uploadLocation);
+			if (file.exists())
+				file.delete();
+			if (!file.exists())
+				file.createNewFile();
+			OutputStream out = new FileOutputStream(fileDetails.uploadLocation);
+			int read = 0;
+			byte[] bytes = new byte[1024];
+
+			logger.info("Writing the file to" + fileDetails.uploadLocation);
+			while ((read = uploadedInputStream.read(bytes)) != -1) {
+				out.write(bytes, 0, read);
+			}
+			out.flush();
+			out.close();
+
+			logger.info("File is uploaded to " + fileDetails.uploadLocation);
+
+			fd.status = FileUploadStatus.UPLOAD_COMPLETED;
+		} catch (IOException e) {
+			fd.status = FileUploadStatus.UPLOAD_IN_ERROR;
+			logger.error(GetStacktrace.getStacktraceString(e));
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			fd.status = FileUploadStatus.UPLOAD_IN_ERROR;
+			logger.error(GetStacktrace.getStacktraceString(e));
+		}
+		saveFileStatus(fileDetails);
+		ExecutorService svc = Executors.newFixedThreadPool(1);
+		svc.submit(new ValidationWorker(fileDetails));
+		// validateFile(fileDetails);
+	}
+
+	class ValidationWorker implements Callable<String> {
+		private FileDetails fileDetails;
+
+		ValidationWorker(FileDetails fd) {
+			this.fileDetails = fd;
+		}
+
+		@Override
+		public String call() throws Exception {
+			// TODO Auto-generated method stub
+			try {
+				validateFile(fileDetails);
+			} catch (Exception e) {
+				logger.error("Error in validation..");
+			}
+			updateFileStatus(fileDetails);
+			return "VALIDATION COMPLETED";
+		}
+
+	}
+
+	private void writeErrorsToFile(FileDetails fileDetails) {
+		logger.info("Writing upload status to file.");
+		String casperUploadPath = Constants.CASPER_UPLOAD_ERROR_LOC+ fileDetails.uploadStatusId+"/";
+		//String errorFileName  = "UPLOAD_STATUS_"+fileDetails.fileName.substring(0, fileDetails.fileName.lastIndexOf('.')+1)+"tsv";
+		String errorFileName  = "UPLOAD_STATUS_FILE.tsv";
+		logger.info("StatusId:"+fileDetails.uploadStatusId+",Upload status file name:"+errorFileName);
+		File errorFile = new File(casperUploadPath+errorFileName);
+		File errorFileDir = new File(casperUploadPath);
+		if (!errorFileDir.exists())
+			errorFileDir.mkdirs();
+		try {
+			errorFile.createNewFile();
+			FileOutputStream bos = new FileOutputStream(errorFile);
+			bos.write(("Upload Status\t"+fileDetails.uploadStatus.toString()+"\n\n").getBytes());
+			bos.write(fileDetails.retMsg.getBytes());
+			bos.flush();
+			CasperClientUtility.forceUploadToCasper(casperUploadPath+errorFileName,
+					casperUploadPath);
+			fileDetails.errorFileLoc = casperUploadPath+errorFileName;
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			logger.error("Error writing error file");
+			logger.error(GetStacktrace.getStacktraceString(e));
+		}
+
+	}
+
+	private void updateFileStatus(FileDetails fileDetails) throws Exception {
+		if (fileDetails.uploadStatusId == -1) {
+			logger.error("Could not update file upload status since uploadStatusId is -1");
+		}
+		writeErrorsToFile(fileDetails);
+		logger.info("Updating upload status for statusId:" + fileDetails.uploadStatusId + " filename:"
+				+ fileDetails.fileName);
+		String sql = "UPDATE FILE_UPLOAD_STATUS SET FILEID=?,UPLOAD_STATUS=?,ERROR_FILE_LOC=? WHERE STATUSID = ?";
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		Connection conn = dbUtility.getConnection2();
+		try {
+			ps = conn.prepareStatement(sql);
+			ps.setLong(1, fileDetails.fileId);
+			ps.setString(2, fileDetails.uploadStatus.toString());
+			ps.setString(3, fileDetails.errorFileLoc);
+			ps.setLong(4, fileDetails.uploadStatusId);
+			ps.executeUpdate();
+			conn.commit();
+		} catch (Exception e) {
+			logger.error("Error updating upload status for statusId:" + fileDetails.uploadStatusId + " filename:"
+					+ fileDetails.fileName);
+			logger.error(GetStacktrace.getStacktraceString(e));
+			throw e;
+		} 
+		finally
+		{
+			if(ps !=null )
+				ps.close();
+			dbUtility.cleanUp(conn);
+		}
+	}
+
+	private void saveFileStatus(FileDetails fileDetails) throws RevRecException, SQLException {
+		String sql = "INSERT INTO FILE_UPLOAD_STATUS(STATUSID,FILEID,FILENAME,UPLOAD_STATUS,UPLOADED_BY,UPLOAD_TIME) "
+				+ "VALUES(?,-1,?,?,?,?)";
+		Connection conn = dbUtility.getConnection2();
+		PreparedStatement ps = null;
+		try {
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss XXX");
+			String sid = "select SEQ_FILE_UPLOAD_STATUS.nextval as statusid from dual";
+			Statement stmt = conn.createStatement();
+			ResultSet r = stmt.executeQuery(sid);
+			if (r == null)
+				throw new RevRecException("Error while inserting file upload status");
+			r.next();
+			long statusid = r.getInt(1);
+			ps = conn.prepareStatement(sql);
+			ps.setLong(1, statusid);
+			ps.setString(2, fileDetails.fileName);
+			ps.setString(3, FileUploadStatus.UPLOAD_IN_PROGRESS.toString());
+			ps.setString(4, fileDetails.emailId);
+			ps.setTimestamp(5, new Timestamp(new Date().getTime()));
+			int insertedRows = ps.executeUpdate();
+			if (insertedRows == 1) {
+				logger.info("File status inserted sucessfully.");
+				fileDetails.uploadStatusId = statusid;
+				conn.commit();
+			} else {
+				logger.error("File status not inserted sucessfully!");
+				throw new RevRecException("Error while inserting file upload status");
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			logger.error(GetStacktrace.getStacktraceString(e));
+			throw e;
+		} finally
+		{
+			if(ps !=null )
+				ps.close();
+			dbUtility.cleanUp(conn);
+		}
+	}
+
+	private void validateFile(FileDetails fileDetails) throws RevRecException {
+		logger.info("Validating the file: " + fileDetails.uploadLocation);
+		String retMsg = new String();
+		int retStatus = 0;
+		if (fileDetails == null) {
+			fileDetails.uploadStatus = FileUploadStatus.UPLOAD_IN_ERROR;
+			fileDetails.retMsg = "File Details invalid";
+			fileDetails.responseCode = HttpStatus.BAD_REQUEST.value();
+			throw new RevRecException(FileUploadStatus.UPLOAD_IN_ERROR.toString(), HttpStatus.BAD_REQUEST);
+		} else if (!(isValidActivityDate(fileDetails.activityDate, fileDetails))) {
+			retMsg = "Activity date provided by the client is invalid or falls in future";
+			fileDetails.uploadStatus = FileUploadStatus.UPLOAD_VERIFICATION_FAILED;
+			fileDetails.retMsg = retMsg;
+			fileDetails.responseCode = HttpStatus.BAD_REQUEST.value();
+			logger.debug("activity date is not valid.retMsg:" + retMsg);
+			throw new RevRecException(retMsg, HttpStatus.BAD_REQUEST);
+		} else {
+			if (fileDetails.status == FileUploadStatus.UPLOAD_COMPLETED) {
+				Validator validator = null;
+				try {
+					validator = new Validator(fileDetails.uploadLocation);
+					if (fileDetails.fileType != null && !fileDetails.fileType.trim().isEmpty()) {
+						logger.info("setting filetype");
+						validator.setFileType(fileDetails.fileType.trim());
+					}
+					if (fileDetails.activityDate != null && !fileDetails.activityDate.trim().isEmpty()) {
+						logger.info("setting activityDate");
+						validator.setActivityDate(fileDetails.activityDate.trim());
+					}
+					if (fileDetails.businessDivision != null && !fileDetails.businessDivision.trim().isEmpty()) {
+						logger.info("setting businessDivision");
+						validator.setBusinessDivision(fileDetails.businessDivision.trim());
+					}
+				} catch (Exception e) {
+					logger.error(GetStacktrace.getStacktraceString(e));
+					retMsg = Arrays.toString(e.getStackTrace()).replace(",", System.lineSeparator());
+					fileDetails.uploadStatus = FileUploadStatus.UPLOAD_IN_ERROR;
+					fileDetails.retMsg = retMsg;
+					fileDetails.responseCode = HttpStatus.INTERNAL_SERVER_ERROR.value();
+					throw new RevRecException(retMsg, HttpStatus.INTERNAL_SERVER_ERROR);
+				}
+
+				if (!validator.validateFile()
+						|| (validator.getErrorMap() != null && validator.getErrorMap().size() > 0)) {
+					retMsg = validator.getErrorMessages().toString();
+					fileDetails.uploadStatus = FileUploadStatus.UPLOAD_VERIFICATION_FAILED;
+					fileDetails.retMsg = retMsg;
+					fileDetails.responseCode = HttpStatus.BAD_REQUEST.value();
+					logger.debug("retMsg:\n" + retMsg + ",retStatus:" + retStatus);
+					throw new RevRecException(retMsg, HttpStatus.BAD_REQUEST);
+				} else {
+					HashMap<UploadSplitterFields, FileLevelFields> uploadSplitterMap = validator.getUploadSplitMap();
+					for (Entry<UploadSplitterFields, FileLevelFields> uploadSplitter : uploadSplitterMap.entrySet()) {
+						UploadSplitterFields key = uploadSplitter.getKey();
+						FileLevelFields value = uploadSplitter.getValue();
+						try {
+							FileUploadDBOps fsm = new FileUploadDBOps(new File(value.getFilePath()).getName(),
+									value.getNrRows(), Long.parseLong(key.getPartnerId()), fileDetails.rateCardDate,
+									fileDetails.emailId, fileDetails.fileType, fileDetails.fileId,
+									key.getActivityDate(), validator.getFileTypeVersion(),
+									validator.getBuyerReportingPeriod(), validator.getProcessingType(),
+									fileDetails.businessDivision, value.getFilePath(), uploadSplitterMap.size() == 1);
+
+							fsm.addFile();
+							fsm.cleanUp();
+							retStatus = HttpStatus.OK.value();
+							retMsg = "File verified succesfully.";
+							fileDetails.fileId = fsm.getFileId();
+							fileDetails.uploadStatus = FileUploadStatus.UPLOAD_VERIFIED;
+							fileDetails.retMsg = retMsg;
+							fileDetails.responseCode = HttpStatus.OK.value();
+						} catch (RevRecException e) {
+							logger.error(GetStacktrace.getStacktraceString(e));
+							fileDetails.uploadStatus = FileUploadStatus.UPLOAD_IN_ERROR;
+							fileDetails.retMsg = e.getMessage();
+							fileDetails.responseCode = e.getErrorCode().value();
+							throw e;
+						} catch (Exception e) {
+							logger.error(GetStacktrace.getStacktraceString(e));
+							retMsg = FileUploadStatus.UPLOAD_IN_ERROR.toString() + System.lineSeparator()
+									+ Constants.ERROR_MSG;
+							fileDetails.uploadStatus = FileUploadStatus.UPLOAD_IN_ERROR;
+							fileDetails.retMsg = retMsg;
+							fileDetails.responseCode = HttpStatus.INTERNAL_SERVER_ERROR.value();
+							throw new RevRecException(retMsg, HttpStatus.INTERNAL_SERVER_ERROR);
+						}
+					}
+				}
+
+			}
+		}
+		if (retStatus == 0) {
+			retStatus = HttpStatus.INTERNAL_SERVER_ERROR.value();
+			retMsg = FileUploadStatus.UPLOAD_IN_ERROR.toString();
+			logger.info("retStatus is 0.Setting retStatus:" + retStatus + ".Setting retMsg to " + retMsg);
+		}
+		fileDetails.responseCode = retStatus;
+		fileDetails.retMsg = fileDetails.fileName + ":" + retMsg;
+	}
+
+	private boolean isValidActivityDate(String activityDate, FileDetails fileDetails) {
+
+		try {
+			logger.debug("isValidActivityDate:activityDate=" + activityDate);
+			if (activityDate == null || activityDate.trim().isEmpty()) {
+				logger.info("activityDate is null,returning true");
+				return true;
+			}
+			Calendar cal = Calendar.getInstance();
+			int month = cal.get(Calendar.MONTH) + 1;
+			int year = cal.get(Calendar.YEAR);
+			int day = cal.get(Calendar.DAY_OF_MONTH);
+			int curDay = -1;
+			String item = new String(activityDate);
+			boolean validField = true;
+			item = item.replace("\"", "");
+			validField &= (item.length() == 7 || item.length() == 10) && (item.contains("-"))
+					&& (Integer.parseInt(item.split("-")[1]) < 13) && (Integer.parseInt(item.split("-")[0]) > 2000);
+			if (!validField) {
+				logger.info("activityDate is invalid,returning false");
+				return false;
+			}
+			item = item.length() == 7 ? new String(item + "-15") : item;
+			if (validField) {
+				try {
+					SimpleDateFormat df = new SimpleDateFormat(Constants.DATEFORMAT_yyyyMMdd);
+					df.setLenient(false);
+					java.util.Date date = df.parse(item);
+					curDay = Integer.parseInt(item.split("-")[2]);
+				} catch (Exception e) {
+					logger.error(GetStacktrace.getStacktraceString(e));
+					return false;
+				}
+
+				int curYr = Integer.parseInt(item.split("-")[0]);
+				int curMn = Integer.parseInt(item.split("-")[1]);
+
+				if ((curMn > month && curYr == year) || curYr > year
+						|| (curDay > -1 && curDay - day > 0 && curMn == month && curYr == year)) {
+					logger.info("activityDate is invalid,returning false");
+					validField = false;
+				}
+			}
+			if (validField)
+				fileDetails.activityDate = item;
+			return validField;
+		} catch (Exception e) {
+			logger.error(GetStacktrace.getStacktraceString(e));
+			logger.info("Error in activityDate validation,returning false");
+			return false;
+		}
+	}
+
+	private void copyFile(String uploadedFileLocation, String newDir) {
+		try {
+			logger.debug("Copying file from " + uploadedFileLocation + " to " + newDir);
+			FileInputStream src = new FileInputStream(uploadedFileLocation);
+			File destFile = new File(newDir + "/" + new File(uploadedFileLocation).getName());
+			if (!destFile.exists())
+				destFile.createNewFile();
+			FileOutputStream dest = new FileOutputStream(destFile);
+
+			byte[] bytes = new byte[1024];
+
+			int read = 0;
+			while ((read = src.read(bytes, 0, 1024)) > 0)
+				dest.write(bytes, 0, read);
+
+			src.close();
+			dest.close();
+		} catch (Exception e) {
+			logger.error(GetStacktrace.getStacktraceString(e));
+		}
+	}
+
+	public ResponseEntity viewErrors(FileUploadDownloadBO request) throws Exception {
+		String role = null;
+		if (!authChecker.isAuthentic(request.getuKey(), request.getpKey())) {
+			throw new RevRecException(Constants.AUTH_FAILURE, HttpStatus.UNAUTHORIZED);
+		}
+
+		role = authChecker.fetchRole(request.getuKey(), request.getpKey());
+		logger.info("ROLE : " + role);
+
+		if (role == null || role.trim() == null) {
+			logger.info("Invalid role");
+			throw new RevRecException(Constants.INVALID_ROLE, HttpStatus.UNAUTHORIZED);
+		}
+		Long fileId = request.getFileId();
+		if (fileId < 0) {
+			logger.error("Invalid fileId:" + fileId);
+			throw new RevRecException("FileId has to be a positive integer value", HttpStatus.BAD_REQUEST);
+		}
+
+		// ViewErrorsService viewErrorsDBOps = new ViewErrorsService(fileId);
+		List<Long> fileIds = new ArrayList<Long>();
+		fileIds.add(fileId);
+		List<ErrorsTableVo> errorRows = null;
+		try {
+			if (canViewOrDeleteFile(request.getuKey(), request.getpKey(), fileIds))
+				errorRows = viewErrorsService.getError(request.getuKey(), role, fileId);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			logger.error(GetStacktrace.getStacktraceString(e));
+			throw e;
+		}
+		HttpStatus retCode = HttpStatus.OK;
+		String retMsg = "";
+		if (errorRows == null || errorRows.isEmpty()) {
+			errorRows = new ArrayList<ErrorsTableVo>();
+		} else if (errorRows.get(errorRows.size() - 1).getFileId() == "-123") {
+			retMsg = errorRows.get(0).getMessage();
+			errorRows.clear();
+			retCode = HttpStatus.INTERNAL_SERVER_ERROR;
+		}
+
+		ViewErrorsResponse viewErrorsResponse = new ViewErrorsResponse();
+		viewErrorsResponse.setCount(String.valueOf(errorRows.size()));
+		viewErrorsResponse.setError(retMsg);
+		viewErrorsResponse.setMessageList(errorRows);
+		return new ResponseEntity<ViewErrorsResponse>(viewErrorsResponse, retCode);
+	}
+
+	private boolean canViewOrDeleteFile(String uKey, String pKey, List<Long> fileIds) throws Exception {
+		boolean permission = false;
+		Connection conn = null;
+		String role = "";
+		PreparedStatement stmt = null;
+		String query = "";
+		ResultSet rs = null;
+		int size = 0;
+
+		try {
+			logger.info("Checking permission to view/delete files");
+			if (null == uKey || uKey.isEmpty() || CollectionUtils.isEmpty(fileIds)) {
+				logger.info("Invalid uKey/fileIds :" + fileIds);
+				return false;
+			}
+			conn = dbUtility.getConnection2();
+			// AuthChecker authChecker = new AuthChecker();
+			role = authChecker.fetchRole(uKey, pKey);
+			logger.info("role:" + role);
+			if (null != role && Constants.FINANCE.equalsIgnoreCase(role)) {
+				logger.debug("user has admin role:" + role);
+				permission = true;
+			} else {
+				String idplaceHolders = "";
+				for (long long1 : fileIds) {
+					idplaceHolders += ",?";
+				}
+
+				idplaceHolders = idplaceHolders.substring(1);
+				query = "select EMAILID from files where fileid IN (" + idplaceHolders + ")";
+				stmt = conn.prepareStatement(query, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+				for (int i = 1; i <= fileIds.size(); i++) {
+					stmt.setLong(i, fileIds.get(i - 1));
+				}
+				rs = stmt.executeQuery();
+				size = dbUtility.nrRowsResultSet(rs);
+				if (size > 0) {
+					while (rs.next()) {
+						if (!GenerateHash.generateHash(rs.getString("EMAILID")).equalsIgnoreCase(uKey)) {
+							logger.info("User cannot view/delete file:" + ",since it was not uploaded by user.");
+							return false;
+						}
+					}
+					logger.info("permission granted to view/delete files");
+					permission = true;
+				} else {
+					throw new RuntimeException("Invalid files");
+				}
+			}
+		} catch (SQLException sqle) {
+			logger.error("SQL Exception" + GetStacktrace.getStacktraceString(sqle));
+			throw sqle;
+		} catch (Exception e) {
+			logger.error("Error while checking view/delete permission:" + GetStacktrace.getStacktraceString(e));
+			throw e;
+		} finally {
+			if (stmt != null)
+				stmt.close();
+			dbUtility.cleanUp(conn);
+		}
+		return permission;
+
+	}
+
+	public ResponseEntity<List<FileUploadStatusBo>> getFileUploadStatus(FileUploadDownloadBO request) throws RevRecException {
+		// TODO Auto-generated method stub
+		String sql = "";
+		PreparedStatement stmt = null;
+		Connection conn = null;
+		ResultSet rs = null;
+		List<FileUploadStatusBo> result = new ArrayList<>();
+		if (!authChecker.isAuthentic(request.getuKey(), request.getpKey())) {
+			logger.debug("Invalid User:" + request + ".Request processing terminated");
+			throw new RevRecException(Constants.AUTH_FAILURE, HttpStatus.UNAUTHORIZED);
+		}
+		try {
+			conn = dbUtility.getConnection2();
+			sql = "SELECT STATUSID,FILENAME,UPLOADED_BY,UPLOAD_TIME,ERROR_FILE_LOC,FILEID,UPLOAD_STATUS FROM FILE_UPLOAD_STATUS ORDER BY STATUSID DESC";
+			stmt = conn.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			rs = stmt.executeQuery();
+			int size = dbUtility.nrRowsResultSet(rs);
+			if (size > 0) {
+				FileUploadStatusBo bo;
+				while (rs.next()) {
+					bo = new FileUploadStatusBo();
+					String uKey = request.getuKey();
+					String uploadedBy = rs.getString("UPLOADED_BY");
+					if(!StringUtils.isBlank(uploadedBy) && uKey.equals(GenerateHash.generateHash(uploadedBy)))
+					{
+						bo.setUploadedBy(uploadedBy);
+						bo.setErrorFileLocation(rs.getString("ERROR_FILE_LOC"));
+						bo.setFilename(rs.getString("FILENAME"));
+						bo.setStatusId(rs.getLong("STATUSID"));
+						//bo.setUploadedTime(sdf.parse(sdf.format(rs.getDate("UPLOAD_TIME"))));
+						bo.setUploadedTime(rs.getDate("UPLOAD_TIME"));
+						bo.setFileId(rs.getLong("FILEID"));
+						bo.setUploadStatus(FileUploadStatus.valueOf(rs.getString("UPLOAD_STATUS")));
+	
+						result.add(bo);
+					}
+				}
+			}
+		} catch (Exception e) {
+			logger.error("Error while getting file upload status");
+			logger.error(GetStacktrace.getStacktraceString(e));
+		} finally {
+			try {
+				dbUtility.cleanUp(conn);
+			} catch (SQLException e) {
+				logger.error(GetStacktrace.getStacktraceString(e));
+			}
+		}
+		logger.info("response result size:"+result.size());
+		return new ResponseEntity(result, HttpStatus.OK);
+	}
+
+	public ResponseEntity downloadErrorFile(FileUploadStatusBo request) throws RevRecException {
+		// TODO Auto-generated method stub
+		String sql = "";
+		PreparedStatement stmt = null;
+		Connection conn = null;
+		ResultSet rs = null;
+		
+		if (!authChecker.isAuthentic(request.getuKey(), request.getpKey())) {
+			logger.debug("Invalid User:" + request + ".Request processing terminated");
+			throw new RevRecException(Constants.AUTH_FAILURE, HttpStatus.UNAUTHORIZED);
+		}
+		String role = authChecker.fetchRole(request.getuKey(), request.getpKey());
+		if (null == role || role.trim().isEmpty()) {
+			logger.debug("Invalid role:" + role + ".Request processing terminated");
+			throw new RevRecException(Constants.AUTH_FAILURE, HttpStatus.UNAUTHORIZED);
+		}
+		try {
+			sql = "SELECT ERROR_FILE_LOC,UPLOADED_BY FROM FILE_UPLOAD_STATUS WHERE STATUSID=?";
+			conn = dbUtility.getConnection2();
+			stmt = conn.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			stmt.setLong(1, request.getStatusId());
+			rs = stmt.executeQuery();
+			if (dbUtility.nrRowsResultSet(rs) == 1) {
+				rs.next();
+				if (role.equalsIgnoreCase(Constants.UPLOAD_ONLY)) {
+					String uploadedBy = rs.getString("UPLOADED_BY");
+					if (StringUtils.isBlank(uploadedBy) || !request.getuKey().equals(GenerateHash.generateHash(uploadedBy))) {
+						throw new RevRecException(Constants.AUTH_FAILURE, HttpStatus.UNAUTHORIZED);
+					}
+				}
+				String loc = rs.getString("ERROR_FILE_LOC");
+				logger.info("error file loc for status id " + request.getStatusId() + " is " + loc);
+				if (!StringUtils.isBlank(loc)) {
+					CasperClientUtility.downloadFromCasper(loc, Constants.FILE_DOWNLOAD_LOC);
+					String filename = loc.substring(loc.lastIndexOf('/') + 1);
+					logger.info("Error file name is:" + filename);
+					File errorFile = new File(Constants.FILE_DOWNLOAD_LOC + filename);
+					return ResponseEntity.ok()
+							.header("Content-Disposition",
+									"file; filename=\"" + EscapeUtils.escapeHtml(errorFile.getName()) + "\"")
+							.header("Access-Control-Expose-Headers", "Content-Disposition")
+							.contentType(MediaType.APPLICATION_OCTET_STREAM)
+							.body(new InputStreamResource(new FileInputStream(errorFile)));
+				} else {
+					throw new RevRecException("Error file location is blank/null");
+				}
+			}
+			else
+			{
+				throw new RevRecException("Upload status does not exist with given statusId "+request.getStatusId());
+			}
+		} catch (RevRecException e) {
+			throw e;
+		} catch (Exception e) {
+			logger.error(GetStacktrace.getStacktraceString(e));
+			throw new RevRecException("Error downloading error file");
+		} finally {
+			try {
+				dbUtility.cleanUp(conn);
+			} catch (SQLException e) {
+				logger.error(GetStacktrace.getStacktraceString(e));
+			}
+		}
+	}
+	
+	public static void main(String[] args) {
+		Calendar calendar = Calendar.getInstance();
+		TimeZone timeZone = calendar.getTimeZone();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss XXX");
+		  System.out.println((Calendar.getInstance().getTime().toString()));
+	}
+}

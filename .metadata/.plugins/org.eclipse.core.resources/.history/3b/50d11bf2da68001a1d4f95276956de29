@@ -1,0 +1,18 @@
+import java.io.IOException;
+
+public class MinimumSwaps2 {
+
+    // Complete the minimumSwaps function below.
+    static int minimumSwaps(int[] arr) {
+    	int numSwaps = 0;
+    	int index = 0;
+    	
+    	return numSwaps;
+    }
+
+
+    public static void main(String[] args) throws IOException {
+
+        System.out.println(minimumSwaps(new int[] {1}));
+    }
+}

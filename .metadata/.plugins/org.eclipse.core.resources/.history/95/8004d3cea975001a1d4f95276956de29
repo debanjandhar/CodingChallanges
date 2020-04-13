@@ -1,0 +1,18 @@
+package projecteuler;
+
+public class SmallestPrime {
+
+	public static void main(String[] args) {
+		int n = 40;
+
+		for (int i = n;; i += n) {
+			boolean found = true;
+			for (int j = 2; j <= n; j++) {
+				if (i % j != 0) {
+					break;
+				}
+			}
+		}
+
+	}
+}

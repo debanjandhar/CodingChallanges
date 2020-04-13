@@ -1,0 +1,5 @@
+package com.odc.pricemng.exception;
+
+public class PriceManagerException extends APIException{
+
+}

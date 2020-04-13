@@ -1,0 +1,28 @@
+import java.io.IOException;
+import java.util.Arrays;
+
+public class Contacts {
+
+    /*
+     * Complete the contacts function below.
+     */
+    static int[] contacts(String[][] queries) {
+    	int[] output = new int[queries.length];
+    	
+    	return output;
+    }
+    
+    public static void main(String[] args) throws IOException {
+
+        System.out.println(Arrays.toString(contacts(new String[][] {{"1","2"}})));
+    }
+}
+
+class Node{
+	private final int NUM_ALPHABETS = 26;
+	
+	private char[] alphabet = new char[NUM_ALPHABETS];
+	
+	public Node() {
+	}
+}

@@ -1,0 +1,39 @@
+package hackerrank;
+
+public class Test {
+
+	public static void main(String[] args) {
+
+	}
+
+	static void mergeSort(long[] inputArr, int start, int end) {
+		if (start > end) {
+			return;
+		}
+
+		int mid = (start + end) / 2;
+		mergeSort(inputArr, start, mid);
+		mergeSort(inputArr, mid + 1, end);
+
+		merge(inputArr, start, mid, end);
+	}
+
+	static void merge(long[] inputArr, int start, int mid, int end) {
+		int i = start, j = mid + 1;
+		long[] l = new long[mid - start], r = new long[end - mid + 1];
+
+		for (int k = 0; k < l.length; k++) {
+			l[k] = inputArr[i + k];
+		}
+		for (int k = 0; k < r.length; k++) {
+			r[k] = inputArr[j + k];
+		}
+
+		while (i <= mid && j <= end) {
+			if (l[i] > r[j]) {
+				inputArr[i] = 
+			}
+		}
+	}
+
+}

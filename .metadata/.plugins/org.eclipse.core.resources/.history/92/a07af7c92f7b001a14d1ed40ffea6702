@@ -1,0 +1,42 @@
+package projecteuler;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
+public class N11 {
+	public static void main(String[] args) throws IOException {
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		int[][] input = new int[20][20];
+		int max = Integer.MIN_VALUE;
+		for (int i = 0; i < 20; i++) {
+			String[] n = br.readLine().split(" ");
+			for (int j = 0; j < 20; j++) {
+				input[i][j] = Integer.parseInt(n[j]);
+			}
+		}
+
+		for (int[] is : input) {
+			System.out.println();
+		}
+		
+		int[][] dirs = new int[][] { { 1, 1 }, { -1, -1 }, { 0, -1 }, { -1, 0 }, { 1, 0 }, { 0, 1 }, { 1, -1 },
+				{ -1, 1 } };
+		for (int i = 3; i < 17; i++) {
+			for (int j = 3; j < 17; j++) {
+				for (int[] js : dirs) {
+					int curr = input[i][j];
+					for (int k = 1; k <= 3; k++) {
+						curr *= input[i + js[0] * k][j + js[1] * k];
+					}
+					
+					if (curr > max) {
+						max = curr;
+					}
+				}
+			}
+		}
+		
+		System.out.println(max);
+	}
+}

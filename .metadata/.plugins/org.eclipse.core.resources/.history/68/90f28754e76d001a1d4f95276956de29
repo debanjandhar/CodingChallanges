@@ -1,0 +1,31 @@
+import java.io.IOException;
+
+/**
+ * @author debanjandhar
+ *
+ *         Question :
+ *         https://www.hackerrank.com/challenges/largest-rectangle/problem
+ */
+public class LargestRectangle {
+
+	// Complete the largestRectangle function below.
+	static long largestRectangle(int[] h) {
+		long max = 0l;
+
+		int numElements = h.length;
+		int prevVal = -1;
+
+		for (int i = 0; i < numElements; i++) {
+			
+		}
+
+		return max;
+
+	}
+
+	public static void main(String[] args) throws IOException {
+		int[] h = new int[] { 1, 2, 3 };
+
+		System.out.println(largestRectangle(h));
+	}
+}

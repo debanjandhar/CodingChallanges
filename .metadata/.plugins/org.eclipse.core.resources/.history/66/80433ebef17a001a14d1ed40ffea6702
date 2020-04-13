@@ -1,0 +1,11 @@
+package hackerrank;
+
+public class NoPrefixSet {
+
+}
+
+
+class Node_nps{
+	Node_nps[] chars = new Node_nps[26];
+	
+}

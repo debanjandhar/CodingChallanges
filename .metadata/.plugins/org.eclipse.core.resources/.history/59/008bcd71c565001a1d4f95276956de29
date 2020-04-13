@@ -1,0 +1,96 @@
+import java.io.IOException;
+
+public class QueensAttack {
+
+	// Complete the queensAttack function below.
+	static int queensAttack(int n, int k, int r_q, int c_q, int[][] obstacles) {
+		int count = 0;
+
+		// Define next cell for each of queen's movement
+		int[][] moves = { { 0, -1 }, { -1, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 }, { -1, -1 }, { 1, -1 }, { -1, 1 } };
+		int numMoves = 8;
+		int numObstacles = obstacles.length;
+
+		for (int i = 0; i < numMoves; i++) {
+			int distance  = -1;
+			
+			for (int j = 0; j < numObstacles; j++) {
+				distance = getDistanceToObstacle(r_q, c_q, obstacles[j], moves[i]);
+
+				if (distance != -1) {
+					// Ignoring the cell where obstacle is present
+					count += distance - 1;
+					break;
+				} 
+			}
+			
+			if (distance == -1) {
+				// There is no obstacle and ignoring 0th index calculation.
+				count += getAllAttackingCells(n, r_q, c_q, moves[i]) - 1;
+			}
+		}
+
+		return count;
+	}
+
+	private static int getAllAttackingCells(int boardSize, int x1, int y1, int[] moves) {
+		if (moves[0] == 0) {
+			return getLength(boardSize, y1, moves[1]);
+		} else if (moves[1] == 0) {
+			return getLength(boardSize, x1, moves[0]);
+		} else {
+			// Calculate number of diagonal cells
+			int xDiff = getLength(boardSize, x1, moves[0]);
+			int yDiff = getLength(boardSize, y1, moves[1]);
+
+			return Math.min(xDiff, yDiff);
+		}
+
+	}
+
+	private static int getLength(int boardSize, int axisPoint, int plane) {
+		return Math.abs((((1 + plane) / 2) * boardSize) - axisPoint);
+	}
+
+	// x defines row and y defines column.
+	private static int getDistanceToObstacle(int x1, int y1, int[] x2y2, int[] moves) {
+		int xDiff = x2y2[0] - x1;
+		int yDiff = x2y2[1] - y1;
+
+		boolean isDiagonalObstacle = Math.abs(xDiff) == Math.abs(yDiff);
+
+		// Identify if current piece is an obstacle.
+		if (xDiff != 0 && yDiff != 0 && !isDiagonalObstacle) {
+			return -1;
+		}
+
+		// If 2 cells are diagonally present in a matrix, then difference between
+		// any one co-ordinate gives distance between 2 cells.
+		if (isDiagonalObstacle) {
+			return Math.abs(xDiff);
+		}
+
+		if (moves[0] == 0 && xDiff == 0) {
+			// Obstacle is in x-axis
+			if ((moves[1] < 0 && yDiff < 0) || (moves[1] > 0 && yDiff > 0)) {
+				return Math.abs(yDiff);
+			}
+
+		} else if (moves[1] == 0 && yDiff == 0) {
+			// Obstacle is in y-axis
+			if ((moves[0] < 0 && xDiff < 0) || (moves[0] > 0 && xDiff > 0)) {
+				return Math.abs(xDiff);
+			}
+		}
+
+		return -1;
+
+	}
+
+	public static void main(String[] args) throws IOException {
+
+		int result = queensAttack(5, 3, 4, 3, new int[][] { { 5, 5 }, { 4, 2 }, { 2, 3 } });
+
+		System.out.println(result);
+	}
+}

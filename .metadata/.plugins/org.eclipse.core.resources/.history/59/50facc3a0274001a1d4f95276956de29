@@ -1,0 +1,32 @@
+package projecteuler;
+
+public class N3 {
+	public static void main(String[] args) {
+	}
+
+	private long largestPrime(long n) {
+		if (isPrime(n)) {
+			return n;
+		}
+
+		long sqrt = (long) Math.sqrt(n);
+		for (long i = sqrt; i >= 2; i--) {
+			if (n % i == 0) {
+				if (condition) {
+					
+				}
+			}
+		}
+
+	}
+
+	static boolean isPrime(long n) {
+		for (long i = 2; i <= n / 2; i++) {
+			if (n % i == 0) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+}

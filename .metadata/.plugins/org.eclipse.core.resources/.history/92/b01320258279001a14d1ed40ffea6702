@@ -1,0 +1,24 @@
+package com.odc.pricemng.fintechpricemanagerapi.services;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.data.repository.CrudRepository;
+
+import com.odc.pricemng.fintechpricemanagerapi.entities.RequestParams;
+import com.odc.pricemng.validation.annotations.ValidateUser;
+
+public abstract class AbstractService<T> {
+
+	public List<T> get(@ValidateUser RequestParams rp) {
+		return new ArrayList<>();
+	}
+
+	public abstract List<T> update(@ValidateUser RequestParams rp);
+
+	public abstract T create(@ValidateUser RequestParams rp);
+
+	public abstract T delete(@ValidateUser RequestParams rp);
+
+	protected abstract CrudRepository getRepository();
+}

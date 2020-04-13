@@ -1,0 +1,38 @@
+import java.io.IOException;
+
+public class QueensAttack {
+
+	// Complete the queensAttack function below.
+	static int queensAttack(int n, int k, int r_q, int c_q, int[][] obstacles) {
+		int count = 0;
+
+		// Define next cell for each of queen's movement
+		int[][] moves = { { 0, -1 }, { -1, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 }, { -1, -1 }, { 1, -1 }, { -1, 1 } };
+		int numMoves = 8;
+		int numObstacles = obstacles.length;
+
+		for (int i = 0; i < numMoves; i++) {
+			for (int j = 0; j < numObstacles; j++) {
+				
+			}
+		}
+
+		return count;
+	}
+	
+	private static void isObstacle(int x1, int y1, int[] x2y2, int[] moves) {
+		int xDiff = x2y2[0] - x1;
+		int yDiff = x2y2[1] - y1;
+		
+		if (xDiff ==0 || yDiff == 0 || Math.abs(xDiff) == Math.abs(yDiff)) {
+			
+		}
+	}
+
+	public static void main(String[] args) throws IOException {
+
+		int result = queensAttack(0, 0, 0, 0, new int[][] {});
+
+		System.out.println(result);
+	}
+}

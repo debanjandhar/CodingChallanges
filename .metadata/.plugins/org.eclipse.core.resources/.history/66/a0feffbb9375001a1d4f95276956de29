@@ -1,0 +1,21 @@
+package hackerrank;
+
+public class Test {
+
+	public static void main(String[] args) {
+		System.out.println(0 % 2);
+	}
+
+	private static boolean isPallindrome(int n) {
+		String nStr = String.valueOf(n);
+		boolean isPal = true;
+
+		int i = 0;
+		while (nStr.charAt(i) == nStr.charAt(nStr.length() - 1 - i) & ) {
+
+		}
+
+		return isPal;
+	}
+
+}

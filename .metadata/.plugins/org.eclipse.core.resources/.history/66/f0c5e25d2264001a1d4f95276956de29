@@ -1,0 +1,11 @@
+public class Test {
+
+	public static void main(String[] args) {
+		double d = 12.66;
+		int i = 20, j=30;
+		double percent = 100;
+		
+		System.out.println(Math.round(i/percent));
+	}
+
+}

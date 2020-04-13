@@ -1,0 +1,56 @@
+import java.io.IOException;
+
+public class CounterGame {
+
+	// Complete the counterGame function below.
+	static String counterGame(long n) {
+		String zero = "Louise";
+		String one = "Richard";
+
+		long nextNum = 0;
+
+		boolean isZero = true;
+
+		while (n != 1) {
+			
+		}
+		
+		if (isPowerOf2(n)) {
+			n /= 2;
+		} else {
+			long nextLowerNum = getLowerNumPowOf2(n);
+			n -= nextLowerNum;
+		}
+
+		if (isZero) {
+			return zero;
+		} else {
+			return one;
+		}
+	}
+
+	private static boolean isPowerOf2(long n) {
+		return n > 1 && ((n & (n - 1)) == 0);
+	}
+
+	private static long getLowerNumPowOf2(long n) {
+		long num = 0;
+		int counter = 1;
+		while (true) {
+			int currNum = 1 << counter++;
+
+			if (currNum > n) {
+				break;
+			}
+
+			num = currNum;
+		}
+
+		return num;
+	}
+
+	public static void main(String[] args) throws IOException {
+
+		String result = counterGame(3);
+	}
+}

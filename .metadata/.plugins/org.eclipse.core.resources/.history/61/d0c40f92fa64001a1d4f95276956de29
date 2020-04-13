@@ -1,0 +1,53 @@
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+class Result1 {
+
+	/*
+	 * Complete the 'nonDivisibleSubset' function below.
+	 *
+	 * The function is expected to return an INTEGER. The function accepts following
+	 * parameters: 1. INTEGER k 2. INTEGER_ARRAY s
+	 */
+
+	public static int nonDivisibleSubset(int k, List<Integer> s) {
+		int[] setCounts = new int[s.size()];
+		int[] setArr = new int[s.size()];
+		
+		int index = -1;
+		for (Integer set : s) {
+			setArr[++index] = set;
+		}
+		
+		for(int i=0;i<index;i++) {
+			for(int j=i+1; j< index; j++) {
+				if (condition) {
+					
+				}
+			}
+		}
+		
+		return  1;
+	}
+
+}
+
+public class NonDivisibleSets {
+	public static void main(String[] args) throws IOException {
+
+		int result = Result1.nonDivisibleSubset(1, getListFromint(new int[] {}));
+
+		System.out.println(result);
+	}
+	
+	private static List<Integer> getListFromint(int[] elements) {
+		List<Integer> outputList = new ArrayList<Integer>();
+
+		for (int i = 0; i < elements.length; i++) {
+			outputList.add(elements[i]);
+		}
+
+		return outputList;
+	}
+}

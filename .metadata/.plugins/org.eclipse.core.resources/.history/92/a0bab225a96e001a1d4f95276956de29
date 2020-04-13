@@ -1,0 +1,86 @@
+import java.util.Scanner;
+import java.util.Stack;
+
+class STE {
+	private String bufferText;
+	private Stack<String> operations;
+	private final String STACK_STR_SEPERATOR = ",";
+
+	public STE() {
+		bufferText = "";
+		operations = new Stack<String>();
+	}
+
+	// Considering opInput is present for operations 1, 2 and 3.
+	public void handleOperation(int operation, String opInput) {
+		switch (operation) {
+		case 1:
+			append(opInput);
+			break;
+		case 2:
+			delete(Integer.parseInt(opInput));
+			break;
+		case 3:
+			print(Integer.parseInt(opInput));
+			break;
+		case 4:
+			undo();
+			break;
+		}
+	}
+
+	private void append(String w) {
+		bufferText = bufferText + w;
+		putStack(1, w);
+	}
+
+	private void delete(int numElements) {
+		putStack(2, bufferText.substring(bufferText.length() - numElements));
+		bufferText = bufferText.substring(0, bufferText.length() - numElements);
+	}
+
+	private void print(int charIndex) {
+		System.out.println(bufferText.charAt(charIndex-1));
+	}
+
+	private void undo() {
+		String[] headOp = this.operations.pop().split(STACK_STR_SEPERATOR);
+		switch (key) {
+		case value:
+			
+			break;
+
+		default:
+			break;
+		}
+		
+	}
+
+	private void putStack(int operation, String opInput) {
+		this.operations.push(String.valueOf(operation) + STACK_STR_SEPERATOR + opInput);
+	}
+}
+
+public class SimpleTextEditor {
+
+	public static void main(String[] args) {
+		/*
+		 * Enter your code here. Read input from STDIN. Print output to STDOUT. Your
+		 * class should be named Solution.
+		 */
+
+		Scanner scan = new Scanner(System.in);
+		STE ste = new STE();
+
+		int numElements = scan.nextInt();
+		for (int i = 0; i < numElements; i++) {
+			String[] input = scan.next().split(" ");
+			int operation = Integer.parseInt(input[0]);
+			String inputStr = "";
+			if (operation != 4) {
+				inputStr = input[1];
+			}
+			ste.handleOperation(operation, inputStr);
+		}
+	}
+}

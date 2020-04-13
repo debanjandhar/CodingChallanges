@@ -1,0 +1,145 @@
+'''
+Created on 14-Feb-2020
+
+@author: debanjandhar
+'''
+
+import hashlib
+import logging
+import os
+import time
+
+from airflow.models import BaseOperator
+from airflow.utils.decorators import apply_defaults
+import oci
+
+from src.com.oracle.odc.utils.dataflow_client import DataFlowClient
+
+# reference: carter's code: https://gist.github.com/cartershanklin/edcc3723cef5426239d43304be5603ce
+class DataFlowOperator(BaseOperator):
+    template_fields = ('executable', 'compartment_id', 'parameters', 'class_name', 'conf')
+    ui_color = '#A6E6A6'
+
+    @apply_defaults
+    def __init__(
+            self,
+            sparkConfig,
+            mainClassName,
+            jarPath,
+            dateToRun,
+            compartment_id,
+            executable,
+            isClusterMode=True,
+            isDevEnv=False,
+            parameters=None,
+            class_name=None,
+            conf=None,
+            num_executors=1,
+            inst_type="VM.Standard2.1",
+            *args, **kwargs):
+
+        super(DataFlowOperator, self).__init__(*args, **kwargs)
+        self.sparkConfig = sparkConfig
+        self.mainClassName = mainClassName
+        self.executable = executable
+        self.executable = executable
+        self.executable = executable
+        self.lang = 'PYTHON' if self.executable.endswith('.py') else 'JAVA'
+        self.class_name = class_name
+        self.compartment_id = compartment_id
+        self.compartment_id = compartment_id
+        self.compartment_id = compartment_id
+        self.parameters = parameters
+        self.conf = conf
+        self.dataflow_client = DataFlowClient(
+            compartment_id=self.compartment_id
+        )
+
+        config = oci.config.from_file()
+
+        self.object_storage_client = oci.object_storage.ObjectStorageClient(config)
+        self.namespace = self.object_storage_client.get_namespace().data
+        self.bucket_name = "dataflow-userdata"
+        self.num_executors = num_executors
+        self.inst_type = inst_type
+
+    def execute(self, context):
+        
+        # Create hash from executable. 
+        # NOTE : this hash is set as display name and is used to identify if application with this display name was created before or not. 
+        if self.executable.startswith("oci://"):
+            script_hash = hashlib.md5(self.executable.encode('utf-8')).hexdigest()
+            script_os_path = self.executable
+
+            object_name = self.executable
+
+        else:
+            # If the file is present in local, create hash using its content. And then use this hash to identify if it was created before. 
+            script_hash = hashlib.md5(open(self.executable, "rb").read()).hexdigest()
+
+            object_name = "executables/%s.py" % script_hash
+
+            # Copy the local file into OCI Object Storage for Data flow to read. 
+            self.object_storage_client.put_object(
+                self.namespace, self.bucket_name, object_name, open(self.executable).read())
+
+            script_os_path = "oci://{bucket_name}@{namespace}/{object_name}".format(
+                bucket_name=self.bucket_name,
+                namespace=self.namespace,
+                object_name=object_name)
+
+        existing_app = None
+        for app in self.dataflow_client.get_applications():
+            print("DataflowOperator says app is {}".format(app))
+            
+            #  Check if we have created an application with same name or not. 
+            if app["displayName"] == script_hash:
+                existing_app = app
+                break
+
+        # If application is not created in Data Flow, then create one. 
+        if not existing_app:
+            existing_app = self.dataflow_client.create_application(
+                script_hash,
+                script_os_path,
+                class_name=self.class_name if self.class_name else os.path.basename(object_name),
+                lang=self.lang,
+                params=self.parameters,
+                conf=self.conf,
+                num_executors=self.num_executors,
+                executor_shape=self.inst_type,
+                driver_shape=self.inst_type,
+            )
+
+        application_id = existing_app["id"]
+
+        task_name = context['task'].task_id + '_' + context['execution_date'].isoformat()
+        run = self.dataflow_client.create_run(
+            application_id,
+            task_name,
+            self.parameters,
+            num_executors=self.num_executors,
+            executor_shape=self.inst_type,
+            driver_shape=self.inst_type,
+
+        )
+
+        logging.info(run)
+
+        while True:
+            logging.info('sleeping for 30 seconds...')
+            time.sleep(30)
+
+            runs = self.dataflow_client.get_runs()
+
+            current_run = [x for x in runs if x['id'] == run['id']]
+
+            state = current_run[0]['lifecycleState']
+
+            logging.info('run %s state %s' % (current_run[0]['id'], state))
+
+            if state not in ['ACCEPTED', 'IN_PROGRESS']:
+                break
+
+        if state == 'FAILED':
+            logging.error(self.dataflow_client.get_stdout_logs(run['id']))

@@ -1,0 +1,24 @@
+public class StackTest {
+
+	private int[] stackArr;
+	private int head; 
+	
+	public StackTest(int size) {
+		stackArr = new int[size];
+		head = 0;
+	}
+	
+	public static void main(String[] args) {
+
+	}
+	
+	private void push(int ele) {
+		if (head==0) {
+			stackArr[head++] = ele;
+		}else {
+			stackArr[++head] = ele;
+		}
+
+	}
+
+}

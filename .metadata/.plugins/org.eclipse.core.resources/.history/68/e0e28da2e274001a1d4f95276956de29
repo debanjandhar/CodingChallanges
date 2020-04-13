@@ -1,0 +1,22 @@
+package hackerrank;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
+public class TruckTour {
+	public static void main(String[] args) {
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in))
+	}
+}
+
+class Stop {
+	int petrolRcvd;
+	int petrolLft;
+	int nextStop;
+
+	public Stop(int petrolRcvd, int nextStop) {
+		this.petrolRcvd = petrolRcvd;
+		this.nextStop = nextStop;
+		this.petrolLft = 0;
+	}
+}

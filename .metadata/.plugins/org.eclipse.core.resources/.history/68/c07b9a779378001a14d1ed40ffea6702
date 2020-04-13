@@ -1,0 +1,380 @@
+
+package com.odc.pricemng.fintechpricemanagerapi.entities;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang.builder.ToStringBuilder;
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonPropertyOrder({ "id", "name", "partner", "buyers", "channels", "deviceTypes", "advertisingTypes", "countries",
+		"createdBy", "updatedBy", "categoryPrices", "status", "startDate", "endDate", "createdAt", "updatedAt",
+		"isUniversal", "labels" })
+public class Item {
+
+	@JsonProperty("id")
+	private Integer id;
+	@JsonProperty("name")
+	private String name;
+	@JsonProperty("partner")
+	private Partner partner;
+	@JsonProperty("buyers")
+	private List<Buyer> buyers = new ArrayList<Buyer>();
+	@JsonProperty("channels")
+	private List<Object> channels = new ArrayList<Object>();
+	@JsonProperty("deviceTypes")
+	private List<Object> deviceTypes = new ArrayList<Object>();
+	@JsonProperty("advertisingTypes")
+	private List<Object> advertisingTypes = new ArrayList<Object>();
+	@JsonProperty("countries")
+	private List<Object> countries = new ArrayList<Object>();
+	@JsonProperty("createdBy")
+	private CreatedBy createdBy;
+	@JsonProperty("updatedBy")
+	private UpdatedBy updatedBy;
+	@JsonProperty("categoryPrices")
+	private List<CategoryPrice> categoryPrices = new ArrayList<CategoryPrice>();
+	@JsonProperty("status")
+	private String status;
+	@JsonProperty("startDate")
+	private String startDate;
+	@JsonProperty("endDate")
+	private String endDate;
+	@JsonProperty("createdAt")
+	private String createdAt;
+	@JsonProperty("updatedAt")
+	private String updatedAt;
+	@JsonProperty("isUniversal")
+	private Boolean isUniversal;
+	@JsonProperty("labels")
+	private List<Object> labels = new ArrayList<Object>();
+	@JsonIgnore
+	private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+
+	@JsonProperty("id")
+	public Integer getId() {
+		return id;
+	}
+
+	@JsonProperty("id")
+	public void setId(Integer id) {
+		this.id = id;
+	}
+
+	public Item withId(Integer id) {
+		this.id = id;
+		return this;
+	}
+
+	@JsonProperty("name")
+	public String getName() {
+		return name;
+	}
+
+	@JsonProperty("name")
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public Item withName(String name) {
+		this.name = name;
+		return this;
+	}
+
+	@JsonProperty("partner")
+	public Partner getPartner() {
+		return partner;
+	}
+
+	@JsonProperty("partner")
+	public void setPartner(Partner partner) {
+		this.partner = partner;
+	}
+
+	public Item withPartner(Partner partner) {
+		this.partner = partner;
+		return this;
+	}
+
+	@JsonProperty("buyers")
+	public List<Buyer> getBuyers() {
+		return buyers;
+	}
+
+	@JsonProperty("buyers")
+	public void setBuyers(List<Buyer> buyers) {
+		this.buyers = buyers;
+	}
+
+	public Item withBuyers(List<Buyer> buyers) {
+		this.buyers = buyers;
+		return this;
+	}
+
+	@JsonProperty("channels")
+	public List<Object> getChannels() {
+		return channels;
+	}
+
+	@JsonProperty("channels")
+	public void setChannels(List<Object> channels) {
+		this.channels = channels;
+	}
+
+	public Item withChannels(List<Object> channels) {
+		this.channels = channels;
+		return this;
+	}
+
+	@JsonProperty("deviceTypes")
+	public List<Object> getDeviceTypes() {
+		return deviceTypes;
+	}
+
+	@JsonProperty("deviceTypes")
+	public void setDeviceTypes(List<Object> deviceTypes) {
+		this.deviceTypes = deviceTypes;
+	}
+
+	public Item withDeviceTypes(List<Object> deviceTypes) {
+		this.deviceTypes = deviceTypes;
+		return this;
+	}
+
+	@JsonProperty("advertisingTypes")
+	public List<Object> getAdvertisingTypes() {
+		return advertisingTypes;
+	}
+
+	@JsonProperty("advertisingTypes")
+	public void setAdvertisingTypes(List<Object> advertisingTypes) {
+		this.advertisingTypes = advertisingTypes;
+	}
+
+	public Item withAdvertisingTypes(List<Object> advertisingTypes) {
+		this.advertisingTypes = advertisingTypes;
+		return this;
+	}
+
+	@JsonProperty("countries")
+	public List<Object> getCountries() {
+		return countries;
+	}
+
+	@JsonProperty("countries")
+	public void setCountries(List<Object> countries) {
+		this.countries = countries;
+	}
+
+	public Item withCountries(List<Object> countries) {
+		this.countries = countries;
+		return this;
+	}
+
+	@JsonProperty("createdBy")
+	public CreatedBy getCreatedBy() {
+		return createdBy;
+	}
+
+	@JsonProperty("createdBy")
+	public void setCreatedBy(CreatedBy createdBy) {
+		this.createdBy = createdBy;
+	}
+
+	public Item withCreatedBy(CreatedBy createdBy) {
+		this.createdBy = createdBy;
+		return this;
+	}
+
+	@JsonProperty("updatedBy")
+	public UpdatedBy getUpdatedBy() {
+		return updatedBy;
+	}
+
+	@JsonProperty("updatedBy")
+	public void setUpdatedBy(UpdatedBy updatedBy) {
+		this.updatedBy = updatedBy;
+	}
+
+	public Item withUpdatedBy(UpdatedBy updatedBy) {
+		this.updatedBy = updatedBy;
+		return this;
+	}
+
+	@JsonProperty("categoryPrices")
+	public List<CategoryPrice> getCategoryPrices() {
+		return categoryPrices;
+	}
+
+	@JsonProperty("categoryPrices")
+	public void setCategoryPrices(List<CategoryPrice> categoryPrices) {
+		this.categoryPrices = categoryPrices;
+	}
+
+	public Item withCategoryPrices(List<CategoryPrice> categoryPrices) {
+		this.categoryPrices = categoryPrices;
+		return this;
+	}
+
+	@JsonProperty("status")
+	public String getStatus() {
+		return status;
+	}
+
+	@JsonProperty("status")
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public Item withStatus(String status) {
+		this.status = status;
+		return this;
+	}
+
+	@JsonProperty("startDate")
+	public String getStartDate() {
+		return startDate;
+	}
+
+	@JsonProperty("startDate")
+	public void setStartDate(String startDate) {
+		this.startDate = startDate;
+	}
+
+	public Item withStartDate(String startDate) {
+		this.startDate = startDate;
+		return this;
+	}
+
+	@JsonProperty("endDate")
+	public String getEndDate() {
+		return endDate;
+	}
+
+	@JsonProperty("endDate")
+	public void setEndDate(String endDate) {
+		this.endDate = endDate;
+	}
+
+	public Item withEndDate(String endDate) {
+		this.endDate = endDate;
+		return this;
+	}
+
+	@JsonProperty("createdAt")
+	public String getCreatedAt() {
+		return createdAt;
+	}
+
+	@JsonProperty("createdAt")
+	public void setCreatedAt(String createdAt) {
+		this.createdAt = createdAt;
+	}
+
+	public Item withCreatedAt(String createdAt) {
+		this.createdAt = createdAt;
+		return this;
+	}
+
+	@JsonProperty("updatedAt")
+	public String getUpdatedAt() {
+		return updatedAt;
+	}
+
+	@JsonProperty("updatedAt")
+	public void setUpdatedAt(String updatedAt) {
+		this.updatedAt = updatedAt;
+	}
+
+	public Item withUpdatedAt(String updatedAt) {
+		this.updatedAt = updatedAt;
+		return this;
+	}
+
+	@JsonProperty("isUniversal")
+	public Boolean getIsUniversal() {
+		return isUniversal;
+	}
+
+	@JsonProperty("isUniversal")
+	public void setIsUniversal(Boolean isUniversal) {
+		this.isUniversal = isUniversal;
+	}
+
+	public Item withIsUniversal(Boolean isUniversal) {
+		this.isUniversal = isUniversal;
+		return this;
+	}
+
+	@JsonProperty("labels")
+	public List<Object> getLabels() {
+		return labels;
+	}
+
+	@JsonProperty("labels")
+	public void setLabels(List<Object> labels) {
+		this.labels = labels;
+	}
+
+	public Item withLabels(List<Object> labels) {
+		this.labels = labels;
+		return this;
+	}
+
+	@Override
+	public String toString() {
+		return ToStringBuilder.reflectionToString(this);
+	}
+
+	@JsonAnyGetter
+	public Map<String, Object> getAdditionalProperties() {
+		return this.additionalProperties;
+	}
+
+	@JsonAnySetter
+	public void setAdditionalProperty(String name, Object value) {
+		this.additionalProperties.put(name, value);
+	}
+
+	public Item withAdditionalProperty(String name, Object value) {
+		this.additionalProperties.put(name, value);
+		return this;
+	}
+
+	@Override
+	public int hashCode() {
+		return new HashCodeBuilder().append(id).append(name).append(partner).append(buyers).append(channels)
+				.append(deviceTypes).append(advertisingTypes).append(countries).append(createdBy).append(updatedBy)
+				.append(categoryPrices).append(status).append(startDate).append(endDate).append(createdAt)
+				.append(updatedAt).append(isUniversal).append(labels).append(additionalProperties).toHashCode();
+	}
+
+	@Override
+	public boolean equals(Object other) {
+		if (other == this) {
+			return true;
+		}
+		if ((other instanceof Item) == false) {
+			return false;
+		}
+		Item rhs = ((Item) other);
+		return new EqualsBuilder().append(id, rhs.id).append(name, rhs.name).append(partner, rhs.partner)
+				.append(buyers, rhs.buyers).append(channels, rhs.channels).append(deviceTypes, rhs.deviceTypes)
+				.append(advertisingTypes, rhs.advertisingTypes).append(countries, rhs.countries)
+				.append(createdBy, rhs.createdBy).append(updatedBy, rhs.updatedBy)
+				.append(categoryPrices, rhs.categoryPrices).append(status, rhs.status).append(startDate, rhs.startDate)
+				.append(endDate, rhs.endDate).append(createdAt, rhs.createdAt).append(updatedAt, rhs.updatedAt)
+				.append(isUniversal, rhs.isUniversal).append(labels, rhs.labels)
+				.append(additionalProperties, rhs.additionalProperties).isEquals();
+	}
+
+}

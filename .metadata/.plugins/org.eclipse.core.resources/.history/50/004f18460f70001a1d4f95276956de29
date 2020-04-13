@@ -1,0 +1,50 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
+public class SubtreeAndPaths {
+
+	static void performOperation(int[][] graph, String[] queries) {
+		int[] weights = new int[graph.length];
+	}
+	
+	private void findMaxWtBtwnRoutes(int source, int dest, int[][] graph, int weights) {
+
+	}
+
+	public static void main(String[] args) throws NumberFormatException, IOException {
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		int numOfEdges = Integer.parseInt(br.readLine());
+		int[][] graph = new int[numOfEdges][numOfEdges];
+
+		for (int i = 0; i < numOfEdges; i++) {
+			String[] inputNode = br.readLine().split(" ");
+			int a = Integer.parseInt(inputNode[0]);
+			int b = Integer.parseInt(inputNode[1]);
+			graph[a][b] = 1;
+			graph[b][a] = 1;
+		}
+
+		int numQueries = Integer.parseInt(br.readLine());
+		String[] queries = new String[numQueries];
+		for (int i = 0; i < numQueries; i++) {
+			queries[i] = br.readLine();
+		}
+
+	}
+}
+
+class TraverseNode {
+	public int nodeId;
+	public int maxWeight;
+
+	public TraverseNode(int nodeId) {
+		this.nodeId = nodeId;
+		this.maxWeight = 0;
+	}
+
+	public TraverseNode(int nodeId, int maxWeight) {
+		this.nodeId = nodeId;
+		this.maxWeight = maxWeight;
+	}
+}

@@ -1,0 +1,57 @@
+import java.io.IOException;
+import java.util.List;
+
+class NonDivisibleSubsetResult {
+
+	/*
+	 * Complete the 'nonDivisibleSubset' function below.
+	 *
+	 * The function is expected to return an INTEGER. The function accepts following
+	 * parameters: 1. INTEGER k 2. INTEGER_ARRAY s
+	 */
+
+	public static int nonDivisibleSubset(int k, List<Integer> s) {
+		int[] reminders = new int[k];
+		int count = 0;
+
+		for (Integer set : s) {
+			reminders[set % k]++;
+		}
+
+		if (reminders[0] > 0) {
+			count++;
+		}
+
+		int endPivot;
+		// Traversing half the length because we will be using 2 pivot elements from
+		// start and end.
+		for (int startPivot = 1; startPivot < reminders.length / 2; startPivot++) {
+			endPivot = reminders.length - startPivot;
+			if (startPivot == endPivot) {
+				count++;
+				continue;
+			}
+
+			// since both start and end pivot sum up to k, so both cannot be selected. We
+			// will select the one which has higher count as, it contributes to larger final
+			// array. In case both values are equal, we are randomly chosing startpivot
+			// element.
+			if (reminders[startPivot] >= reminders[endPivot]) {
+				count += reminders[startPivot];
+			} else {
+
+			}
+		}
+
+		return count;
+	}
+
+}
+
+public class NonDivisibleSubset {
+	public static void main(String[] args) throws IOException {
+
+		int result = NonDivisibleSubsetResult.nonDivisibleSubset(0, Helper.getListFromint(new int[] {}));
+		System.out.println(result);
+	}
+}

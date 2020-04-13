@@ -1,0 +1,72 @@
+package com.odc.pricemng.exception;
+
+/**
+ * @author debanjandhar
+ * 
+ *         User can override this class to serve any of the 2 purpose : 1.
+ *         Override getLocalizedMessage, to give a better formatting of errors
+ *         in log. 2. Override handleException, to format error string in API
+ *         response.
+ *
+ */
+public class APIException extends Exception {
+
+	private static final long serialVersionUID = -3333141574988870755L;
+
+	private APIErrorCode errorCode;
+
+	public APIException(String errorMsg) {
+		super(errorMsg);
+	}
+
+	public APIException(String errorMsg, APIErrorCode errorCode) {
+		super(errorMsg);
+		this.errorCode = errorCode;
+	}
+
+	public APIException(String errorMsg, Throwable e) {
+		super(errorMsg, e);
+	}
+
+	public APIException(String errorMsg, Throwable e, APIErrorCode errorCode) {
+		super(errorMsg, e);
+		this.errorCode = errorCode;
+	}
+
+	public APIException(APIErrorCode errorCode, Throwable e) {
+		super(e);
+		this.errorCode = errorCode;
+	}
+
+	public String getErrorCode() {
+		return errorCode.getErrorCode();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Throwable#getLocalizedMessage()
+	 * 
+	 * Prints custom error in the format [Error-code] : [Error-code-message, custom
+	 * error message ], if errorCode is null, then use super implementation.
+	 */
+	@Override
+	public String getLocalizedMessage() {
+
+		// Handling if errorCode is null, as null errorMessage is handled in super
+		// implementation
+		if (errorCode != null && getMessage() != null) {
+			return "[" + errorCode.getErrorCode() + "] : [" + errorCode.getErrorMsg() + ", " + getMessage() + "]";
+		} else if (errorCode != null) {
+			return "[" + errorCode.getErrorCode() + "] : [" + errorCode.getErrorMsg() + "]";
+		} else {
+			return getMessage();
+		}
+
+	}
+
+	public String handleException() {
+		return getMessage();
+	}
+
+}

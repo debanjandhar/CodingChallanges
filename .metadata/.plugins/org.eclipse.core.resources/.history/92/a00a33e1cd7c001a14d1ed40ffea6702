@@ -1,0 +1,52 @@
+package com.odc.pricemng.fintechpricemanagerapi.services;
+
+import java.util.List;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Component;
+
+import com.odc.pricemng.exception.APIException;
+import com.odc.pricemng.exception.PriceManagerErrorCodes;
+import com.odc.pricemng.exception.PriceManagerException;
+import com.odc.pricemng.fintechpricemanagerapi.entities.RequestParams;
+import com.odc.pricemng.fintechpricemanagerapi.repositories.UsersRepository;
+import com.odc.pricemng.fintechpricemanagerapi.vos.UI_UsersVo;
+
+@Component("testComponent")
+public class TestService extends AbstractService<UI_UsersVo> {
+
+	private static final Logger LOGGER = LogManager.getLogger(TestService.class);
+
+	@Autowired
+	private UsersRepository userRepo;
+
+	@Override
+	public List<UI_UsersVo> get(RequestParams rp) throws APIException {
+		throw new PriceManagerException(PriceManagerErrorCodes.ACCESS_DENIED);
+		return (List<UI_UsersVo>) getRepository().findAll();
+	}
+
+	@Override
+	public List<UI_UsersVo> update(RequestParams rp) throws APIException {
+		return null;
+	}
+
+	@Override
+	public UI_UsersVo create(RequestParams rp) throws APIException {
+		return null;
+	}
+
+	@Override
+	public UI_UsersVo delete(RequestParams rp) throws APIException {
+		return null;
+	}
+
+	@Override
+	protected CrudRepository getRepository() {
+		return this.userRepo;
+	}
+
+}

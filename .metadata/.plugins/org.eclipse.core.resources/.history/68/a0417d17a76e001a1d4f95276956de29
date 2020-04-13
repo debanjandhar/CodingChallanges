@@ -1,0 +1,52 @@
+import java.util.Scanner;
+
+public class SimpleTextEditor {
+
+	public static void main(String[] args) {
+		/*
+		 * Enter your code here. Read input from STDIN. Print output to STDOUT. Your
+		 * class should be named Solution.
+		 */
+
+		Scanner scan = new Scanner(System.in);
+
+		int numElements = scan.nextInt();
+		for (int i = 0; i < numElements; i++) {
+			String[] input = scan.next().split(" ");
+			int operation = Integer.parseInt(input[0]);
+			String inputStr = "";
+			if (operation != 4) {
+				inputStr = input[1];
+			}
+		}
+	}
+}
+
+class STE {
+	private StringBuilder bufferText;
+
+	public STE() {
+		bufferText = new StringBuilder();
+	}
+
+	// Considering opInput is presnt for operations 1, 2 and 3.
+	private void handleOperation(int operation, String opInput) {
+
+	}
+
+	private void append(String w) {
+
+	}
+
+	private void delete(int numElements) {
+
+	}
+
+	private void print(int charIndex) {
+
+	}
+
+	private void undo() {
+
+	}
+}

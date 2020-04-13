@@ -1,0 +1,35 @@
+import java.io.IOException;
+
+public class OrganizingContainersofBalls {
+
+	// Complete the organizingContainers function below.
+	static String organizingContainers(int[][] container) {
+		String output = "";
+
+		int numContainers = container.length;
+
+		for (int containerType = 0; containerType < numContainers; containerType++) {
+			for (int ballType = 0; ballType < container.length; ballType++) {
+				if (containerType != ballType) {
+					int numOfBalls = container[containerType][ballType]; 
+					// process while all the current type of balls are traded.
+					while ( numOfBalls != 0) {
+						
+					}
+				}
+			}
+		}
+		return output;
+	}
+	
+	private int trade(int numBalls, int ballType, int containerType, int[][] container) {
+		int reducedNumBalls = numBalls;
+	}
+
+	public static void main(String[] args) throws IOException {
+
+		int[][] container = new int[2][2];
+
+		System.out.println(organizingContainers(container));
+	}
+}

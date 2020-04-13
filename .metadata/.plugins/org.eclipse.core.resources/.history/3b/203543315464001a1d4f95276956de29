@@ -1,0 +1,54 @@
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+class Result {
+
+    /*
+     * Complete the 'getTotalX' function below.
+     *
+     * The function is expected to return an INTEGER.
+     * The function accepts following parameters:
+     *  1. INTEGER_ARRAY a
+     *  2. INTEGER_ARRAY b
+     */
+
+    public static int getTotalX(List<Integer> a, List<Integer> b) {
+    	
+    	int[] aArr = getIntArrFromList(a);
+    	int[] bArr = getIntArrFromList(b);
+    	
+    	// Considering given arrays are sorted in ascending order. 
+    	int max
+    	
+    	return -1;
+    }
+    
+    private static int[] getIntArrFromList(List<Integer> arr) {
+    	int[] output = new int[arr.size()];
+    	int index=0;
+    	for (Integer integer : arr) {
+			output[index++] = integer;
+		}
+    	
+    	return output;
+    }
+
+}
+
+public class BetweenTwoSets {
+    public static void main(String[] args) throws IOException {
+
+    	List<Integer> arr =  new ArrayList<Integer>();
+    	
+    	List<Integer> brr =  new ArrayList<Integer>();
+    	
+        int total = Result.getTotalX(arr, brr);
+    }
+    
+    private static void addToList(List<Integer> inputList, int[] elements) {
+    	for (int i = 0; i < elements.length; i++) {
+			inputList.add(elements[i]);
+		}
+	}
+}

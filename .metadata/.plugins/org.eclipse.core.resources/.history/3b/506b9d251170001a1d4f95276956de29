@@ -1,0 +1,81 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.LinkedList;
+import java.util.Queue;
+
+public class SubtreeAndPaths {
+
+	static void performOperation(int[][] graph, String[] queries) {
+		int[] weights = new int[graph.length+1];
+
+		for (String query : queries) {
+			String[] operands = query.split(" ");
+			switch (operands[0]) {
+			case "add":
+				addWeightSubtree(Integer.parseInt(operands[1]), Integer.parseInt(operands[2]));
+				break;
+			case "max":
+				Queue<TraverseNode> q = new LinkedList<TraverseNode>();
+				q.add(new TraverseNode(Integer.parseInt(operands[1])));
+
+				System.out.println(findMaxWtBtwnRoutes(q, Integer.parseInt(operands[2]), graph, weights));
+			}
+		}
+	}
+
+	private static int findMaxWtBtwnRoutes(Queue<TraverseNode> q, int dest, int[][] graph, int[] weights) {
+		TraverseNode currentNode = q.remove();
+		if (currentNode.nodeId == dest) {
+			return currentNode.maxWeight;
+		}
+
+		for (int i = currentNode.nodeId + 1; i <= graph.length; i++) {
+			if (graph[currentNode.nodeId][i] == 1) {
+				q.add(new TraverseNode(i, weights[i-1]));
+			}
+		}
+
+		return findMaxWtBtwnRoutes(q, dest, graph, weights);
+	}
+
+	private static void addWeightSubtree(int nodeId, int weight, int[] weights) {
+
+	}
+
+	public static void main(String[] args) throws NumberFormatException, IOException {
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		int numOfEdges = Integer.parseInt(br.readLine());
+		int[][] graph = new int[numOfEdges + 1][numOfEdges + 1];
+
+		for (int i = 0; i < numOfEdges; i++) {
+			String[] inputNode = br.readLine().split(" ");
+			int a = Integer.parseInt(inputNode[0]);
+			int b = Integer.parseInt(inputNode[1]);
+			graph[a][b] = 1;
+			graph[b][a] = 1;
+		}
+
+		int numQueries = Integer.parseInt(br.readLine());
+		String[] queries = new String[numQueries];
+		for (int i = 0; i < numQueries; i++) {
+			queries[i] = br.readLine();
+		}
+
+	}
+}
+
+class TraverseNode {
+	public int nodeId;
+	public int maxWeight;
+
+	public TraverseNode(int nodeId) {
+		this.nodeId = nodeId;
+		this.maxWeight = 0;
+	}
+
+	public TraverseNode(int nodeId, int maxWeight) {
+		this.nodeId = nodeId;
+		this.maxWeight = maxWeight;
+	}
+}

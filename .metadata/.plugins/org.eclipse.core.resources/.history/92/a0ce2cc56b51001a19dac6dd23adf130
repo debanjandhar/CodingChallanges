@@ -1,0 +1,176 @@
+'''
+Created on 14-Feb-2020
+
+@author: debanjandhar
+'''
+
+import logging
+import time
+
+from airflow.models import BaseOperator
+from airflow.utils.decorators import apply_defaults
+import oci
+
+from src.com.oracle.odc.utils.dataflow_client import DataFlowClient
+
+# reference: carter's code: https://gist.github.com/cartershanklin/edcc3723cef5426239d43304be5603ce
+class DataFlowOperator(BaseOperator):
+    template_fields = ('executable', 'compartment_id', 'parameters', 'class_name', 'conf')
+    ui_color = '#A6E6A6'
+
+    @apply_defaults
+    def __init__(
+            self,
+            spark_config,
+            main_class_name,
+            jar_path,
+            date_to_run,
+            compartment_id,
+            executable,
+            is_cluster_mode=True,
+            is_dev_env=False,
+            class_name=None,
+            num_executors=1,
+            inst_type="VM.Standard2.1",
+            *args, **kwargs):
+
+        super(DataFlowOperator, self).__init__(*args, **kwargs)
+        self.spark_config = spark_config
+        self.main_class_name = main_class_name
+        self.jar_path = jar_path
+        self.date_to_run = date_to_run
+        self.executable = executable
+        self.lang = 'PYTHON' if self.executable.endswith('.py') else 'JAVA'
+        self.class_name = class_name
+        self.compartment_id = compartment_id
+        self.is_cluster_mode = is_cluster_mode
+        self.is_dev_env = is_dev_env
+        self.dataflow_client = DataFlowClient(
+            compartment_id=self.compartment_id
+        )
+
+        config = oci.config.from_file()
+        
+        # TODO : Read these values from config file (spark_config) and remove them as args.
+        self.object_storage_client = oci.object_storage.ObjectStorageClient(config)
+        self.namespace = self.object_storage_client.get_namespace().data
+        self.bucket_name = "dataflow-userdata"
+        self.num_executors = num_executors
+        self.inst_type = inst_type
+
+    def execute(self, context):
+        
+        # TODO : Convert debuggers from logging.info to logging.debug. 
+        
+        # Create hash from executable. 
+        # NOTE : this hash is set as display name and is used to identify if application with this display name was created before or not. 
+#         if self.executable.startswith("oci://"):
+#             script_hash = hashlib.md5(self.executable.encode('utf-8')).hexdigest()
+#             script_os_path = self.executable
+# 
+#             object_name = self.executable
+# 
+#         else:
+#             # If the file is present in local, create hash using its content. And then use this hash to identify if it was created before. 
+#             script_hash = hashlib.md5(open(self.executable, "rb").read()).hexdigest()
+# 
+#             object_name = "executables/%s.py" % script_hash
+# 
+#             # Copy the local file into OCI Object Storage for Data flow to read. 
+#             self.object_storage_client.put_object(
+#                 self.namespace, self.bucket_name, object_name, open(self.executable).read())
+# 
+#             script_os_path = "oci://{bucket_name}@{namespace}/{object_name}".format(
+#                 bucket_name=self.bucket_name,
+#                 namespace=self.namespace,
+#                 object_name=object_name)
+
+        # This will be used as application and run names. 
+        driver_class = self.main_class_name.rsplit('.', 1)[1]
+
+        existing_app = None
+        for app in self.dataflow_client.get_applications():
+            logging.info("DataflowOperator says app is {}".format(app))
+            
+            #  Check if we have created an application with same name or not. 
+            if app["displayName"] == driver_class:
+                existing_app = app
+                break
+
+        parameters, configs = self.construct_spark_conf_and_user_params(self.spark_config, driver_class, self.jar_path, self.date_to_run, self.is_cluster_mode, self.is_dev_env)
+
+        logging.info("Spark Job Parameters : {} & Config : {}".format(parameters, configs))
+
+        # If application is not created in Data Flow, then create one. 
+        if not existing_app:
+            existing_app = self.dataflow_client.create_application(
+                driver_class,
+                self.jar_path,
+                class_name=self.main_class_name,
+                lang=self.lang,
+                params=parameters,
+                conf=configs,
+                num_executors=self.num_executors,
+                executor_shape=self.inst_type,
+                driver_shape=self.inst_type,
+            )
+
+        application_id = existing_app["id"]
+
+        # Adding execution to application name in order to distinguish each run. 
+        task_name = driver_class + '_' + context['execution_date'].isoformat()
+        run = self.dataflow_client.create_run(
+            application_id,
+            task_name,
+            parameters,
+            num_executors=self.num_executors,
+            executor_shape=self.inst_type,
+            driver_shape=self.inst_type,
+
+        )
+
+        logging.info(run)
+
+        while True:
+            logging.info('sleeping for 30 seconds...')
+            time.sleep(30)
+
+            runs = self.dataflow_client.get_runs()
+
+            current_run = [x for x in runs if x['id'] == run['id']]
+
+            state = current_run[0]['lifecycleState']
+
+            logging.info('run %s state %s' % (current_run[0]['id'], state))
+
+            if state not in ['ACCEPTED', 'IN_PROGRESS']:
+                break
+
+        if state == 'FAILED':
+            logging.error(self.dataflow_client.get_stdout_logs(run['id']))
+            
+    def construct_spark_conf_and_user_params(self, sparkConfig, driver_class, jarPath, dateToRun, isClusterMode, isDevEnv=False):
+        params = {}
+        confs = {}
+        
+        # These values will be directly set to dataflow client. 
+#         if is_cluster_mode == True:
+#             params = spark_config.cluster_conf.items()
+#         else:
+#             params = spark_config.cluster_client_conf.items()
+            
+        params = self.spark_config.spark_conf.items()
+        
+        try:
+            if isDevEnv:
+                driver_class += "_dev"
+                logging.info("driver_class = " + driver_class)
+                confs = sparkConfig.driver_conf[driver_class].items()
+        except KeyError as err:
+            logging.error("Encountered error in DataflowOperator while looking for key [{}] in spark_config : [{}]".format(driver_class, err))
+            pass
+        
+        confs[' --startDate '] = dateToRun
+        confs[' --endDate '] = dateToRun
+        
+        return params, confs

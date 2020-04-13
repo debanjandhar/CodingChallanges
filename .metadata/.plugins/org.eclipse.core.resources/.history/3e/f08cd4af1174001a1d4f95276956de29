@@ -1,0 +1,56 @@
+package codegig;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Arrays;
+import java.util.StringTokenizer;
+
+public class BeyBlade {
+
+	public static void main(String[] args) throws NumberFormatException, IOException {
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		int numTestCases = Integer.parseInt(br.readLine());
+
+		for (int i = 0; i < numTestCases; i++) {
+			int numMembers = Integer.parseInt(br.readLine());
+			long[] gMems = new long[numMembers];
+			long[] ngMems = new long[numMembers];
+
+			StringTokenizer gTokens = new StringTokenizer(br.readLine());
+			StringTokenizer ngTokens = new StringTokenizer(br.readLine());
+
+			int index = 0;
+			while (index < numMembers) {
+				gMems[index] = Long.parseLong((String)gTokens.nextElement());
+				ngMems[index] = Long.parseLong((String)ngTokens.nextElement());
+
+				index++;
+			}
+			
+			sort(gMems);
+			sort(ngMems);
+			
+			int gIndex = 0, ngIndex = 0;
+			while (ngIndex < numMembers) {
+				if (gMems[gIndex] > ngMems[ngIndex]) {
+					
+				}
+			}
+		}
+	}
+
+	private static void sort(long[] input) {
+		int numEle = input.length;
+		for (int i = 0; i < numEle - 1; i++) {
+			for (int j = i + 1; j < numEle; j++) {
+				if (input[i] < input[j]) {
+					long tmp = input[i];
+					input[i] = input[j];
+					input[j] = tmp;
+				}
+			}
+		}
+	}
+
+}

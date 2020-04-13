@@ -1,0 +1,24 @@
+import java.io.IOException;
+import java.util.Scanner;
+
+public class Encryption {
+
+	// Complete the encryption function below.
+	static String encryption(String s) {
+		StringBuilder sb = new StringBuilder();
+
+		// Number of spaces will be one less than number of words in the sentence.
+		int numSpaces = s.split(" ").length - 1;
+
+		int rows = Math.floor(Math.sqrt(numSpaces));
+		
+		return sb.toString();
+	}
+
+	private static final Scanner scanner = new Scanner(System.in);
+
+	public static void main(String[] args) throws IOException {
+
+		System.out.println(encryption(""));
+	}
+}

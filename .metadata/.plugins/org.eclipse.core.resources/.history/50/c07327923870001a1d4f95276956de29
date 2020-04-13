@@ -1,0 +1,35 @@
+import java.io.IOException;
+
+public class KindergartenAdventures {
+
+	/*
+	 * Complete the solve function below.
+	 */
+	static int solve(int[] t) {
+		int startIndex = 0;
+		int max = Integer.MIN_VALUE;
+
+		for (int i = 0; i < t.length; i++) {
+			for (int j = 0; j < t.length; j++) {
+				int gap = 0;
+				int gap = 0;
+				if (j < i) {
+					gap = t.length - i + j;
+				} else {
+					gap = t.length - i;
+				}
+				
+				if (condition) {
+					
+				}
+			}
+		}
+
+		return startIndex;
+	}
+
+	public static void main(String[] args) throws IOException {
+		int[] t = new int[] { 1, 2 };
+		int id = solve(t);
+	}
+}

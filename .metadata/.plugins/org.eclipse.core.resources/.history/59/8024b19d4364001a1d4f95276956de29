@@ -1,0 +1,33 @@
+
+/**
+ * @author debanjandhar
+ * 
+ * Question : https://www.hackerrank.com/challenges/kangaroo/problem?isFullScreen=true
+ *
+ */
+import java.io.IOException;
+
+public class Kangaroos {
+
+	// Complete the kangaroo function below.
+	static String kangaroo(int x1, int v1, int x2, int v2) {
+		int behind, ahead;
+		
+		if (x1 > x2) {
+			behind = x2;
+			ahead = x1;
+		}else {
+			behind=x1;
+			ahead=x2;
+		}
+		
+		return "";
+	}
+
+
+	public static void main(String[] args) throws IOException {
+
+		String result = kangaroo(0, 3, 4, 2);
+		System.out.println(result);
+	}
+}

@@ -1,0 +1,40 @@
+import java.io.IOException;
+
+public class SwapNodes {
+
+	static int[][] swapNodes(int[][] indexes, int[] queries) {
+		int[][] output = new int[queries.length][];
+
+		Node_sn head = prepareTree(indexes);
+		
+		return output;
+	}
+
+	private static Node_sn prepareTree(int[][] indexes) {
+		Node_sn head = new Node_sn();
+		head.data = 1;
+		
+		for (int i = 0; i < indexes.length; i++) {
+			int left = indexes[i][0];
+			int right = indexes[i][1];
+			
+		}
+		
+		return head;
+	}
+
+	public static void main(String[] args) throws IOException {
+
+		int[][] indexes = new int[][] { { 1, 2 }, { 2, 3 } };
+		int[] queries = new int[] { 2, 3 };
+
+		swapNodes(indexes, queries);
+	}
+}
+
+class Node_sn {
+	int data;
+	int height;
+	Node_sn left;
+	Node_sn right;
+}

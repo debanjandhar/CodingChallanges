@@ -1,0 +1,63 @@
+package com.odc.pricemng.fintechpricemanagerapi.controllers;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.odc.pricemng.fintechpricemanagerapi.entities.RequestParams;
+import com.odc.pricemng.fintechpricemanagerapi.services.AbstractService;
+
+public abstract class AbstractController<T> {
+
+	@RequestMapping(method = RequestMethod.GET, produces = { "application/json" })
+	@ResponseBody
+	public ResponseEntity<?> get(@RequestHeader("uKey") String uKey, @RequestHeader(value = "pKey") String pKey,
+			@RequestHeader("application") String application,
+			@RequestHeader(value = "page", required = false) Integer page,
+			@RequestHeader(value = "pageSize", required = false) Integer pageSize,
+			@RequestHeader(value = "orderBy", required = false, defaultValue = "activeTimestamp") String orderBy,
+			@RequestHeader(value = "order", required = false, defaultValue = "desc") String order,
+			@RequestParam(value = "rowNumber") Optional<Long> rowNumber) {
+		RequestParams requestParams = new RequestParams(uKey, pKey, application);
+		requestParams.setOrderBy(getOrderBy());
+		requestParams.setOrder(getOrder());
+		requestParams.setPage(getPage());
+		requestParams.setPageSize(getPageSize());
+		requestParams.setSearchFor(rowNumber.isPresent() ? rowNumber.get() : null);
+		try {
+			List<T> output = getService().get();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+
+	}
+
+	protected abstract CrudRepository getRepository();
+
+	protected abstract AbstractService<T> getService();
+
+	protected String getOrderBy() {
+		return null;
+	}
+
+	protected String getOrder() {
+		return null;
+	}
+
+	protected Integer getPageSize() {
+		return null;
+	}
+
+	protected Integer getPage() {
+		return null;
+	}
+}

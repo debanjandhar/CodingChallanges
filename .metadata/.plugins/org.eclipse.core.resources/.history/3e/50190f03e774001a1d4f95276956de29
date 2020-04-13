@@ -1,0 +1,49 @@
+package hackerrank;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.LinkedList;
+import java.util.Queue;
+
+public class TruckTour {
+	public static void main(String[] args) throws NumberFormatException, IOException {
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+
+		int numStops = Integer.parseInt(br.readLine());
+		Queue<Stop> q = new LinkedList<>();
+		for (int i = 0; i < numStops; i++) {
+			String[] petrolPump = br.readLine().split(" ");
+			q.add(new Stop(i, Integer.parseInt(petrolPump[0]), Integer.parseInt(petrolPump[1]),
+					i+1%numStops-));
+		}
+
+	}
+
+	static int getFirstStartPoint(Queue<Stop> q, int numStops) {
+		if (q.isEmpty()) {
+			return -1;
+		}
+
+		Stop currStop = q.remove();
+
+		return getFirstStartPoint(q, numStops);
+
+	}
+}
+
+class Stop {
+	int id;
+	int petrolRcvd;
+	int petrolLft;
+	int nextStop;
+	int destination;
+
+	public Stop(int id, int petrolRcvd, int nextStop, int destination) {
+		this.id = id;
+		this.petrolRcvd = petrolRcvd;
+		this.nextStop = nextStop;
+		this.petrolLft = 0;
+		this.destination = destination;
+	}
+}

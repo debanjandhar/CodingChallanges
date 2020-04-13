@@ -1,0 +1,20 @@
+import java.io.IOException;
+
+public class SwapNodes {
+
+	static int[][] swapNodes(int[][] indexes, int[] queries) {
+		
+	}
+
+	public static void main(String[] args) throws IOException {
+
+		int[][] indexes = new int[][] { { 1, 2 }, { 2, 3 } };
+		int[] queries = new int[] { 2, 3 };
+
+		swapNodes(indexes, queries);
+	}
+}
+
+class Node_sn{
+	int data;
+}

@@ -1,0 +1,23 @@
+import java.io.IOException;
+
+public class ArrayManipulation {
+
+	// Complete the arrayManipulation function below.
+	static long arrayManipulation(int n, int[][] queries) {
+		int maxval = 0;
+
+		int[] matrix = new int[n];
+
+		for (int i = 0; i < queries.length; i++) {
+			for (int j = queries[i][0]; j <= queries[i][1]; j++) {
+				
+			}
+		}
+
+		return maxval;
+	}
+
+	public static void main(String[] args) throws IOException {
+		arrayManipulation(1, new int[][] { { 1, 2 } });
+	}
+}

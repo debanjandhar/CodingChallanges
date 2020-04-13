@@ -1,0 +1,47 @@
+package com.odc.pricemng.fintechpricemanagerapi.services;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.data.repository.CrudRepository;
+
+import com.odc.pricemng.fintechpricemanagerapi.entities.Buyer;
+import com.odc.pricemng.fintechpricemanagerapi.entities.RequestParams;
+
+public class TestService extends AbstractService<UI_UsersVo> {
+
+	@Override
+	public List<UI_UsersVo> get(RequestParams rp) {
+		List<UI_UsersVo> l = new ArrayList<Buyer>();
+		UI_UsersVo b = new UI_UsersVo();
+		b.setId(1);
+		b.setName("TestBuyer");
+		l.add(b);
+		return l;
+	}
+
+	@Override
+	public List<UI_UsersVo> update(RequestParams rp) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Buyer create(RequestParams rp) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Buyer delete(RequestParams rp) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	protected CrudRepository getRepository() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+}

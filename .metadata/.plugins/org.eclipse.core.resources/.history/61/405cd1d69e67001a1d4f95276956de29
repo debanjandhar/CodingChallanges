@@ -1,0 +1,63 @@
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class TheGridSearch {
+
+	// Complete the gridSearch function below.
+	static String gridSearch(String[] G, String[] P) {
+		String yes = "YES";
+		String no = "NO";
+
+		int patternRowLength = P.length;
+
+		for (int row = 0; row < G.length - patternRowLength; row++) {
+			String currRow = G[row];
+			if (currRow.contains(P[0]) && matchPattern(P, G, row)) {
+				return yes;
+			}
+		}
+
+		return no;
+	}
+
+	private static boolean matchPattern(String[] pattern, String[] grid, int startRow) {
+		List<Integer> patternAllIndexes = new ArrayList<Integer>();
+
+		for (int i = 0; i < pattern.length; i++) {
+			if (!grid[startRow].contains(pattern[i])) {
+				return false;
+			}
+
+			List<Integer> currentPatternAllStartIndexes = getAlIndexes(grid[startRow], pattern[i]);
+
+			if (patternAllIndexes.isEmpty()) {
+				patternAllIndexes = currentPatternAllStartIndexes;
+			}
+			
+			startRow++;
+		}
+
+		return true;
+	}
+
+	private static List<Integer> getAlIndexes(String str, String pattern) {
+		int endIndex = str.length() - pattern.length();
+		List<Integer> allIndexes = new ArrayList<Integer>();
+		for (int i = 0; i < endIndex; i++) {
+			int currIndex = str.indexOf(pattern, i);
+			if (currIndex != -1) {
+				allIndexes.add(i);
+			}
+		}
+
+		return allIndexes;
+	}
+
+	public static void main(String[] args) throws IOException {
+
+		String[] G = new String[] { "1234567890", "0987654321", "1111111111", "1111111111", "2222222222" };
+		String[] P = new String[] { "876543", "111111", "111111" };
+		System.out.println(gridSearch(G, P));
+	}
+}

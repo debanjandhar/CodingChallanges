@@ -1,0 +1,32 @@
+import java.io.IOException;
+
+public class OrganizingContainersofBalls {
+
+	// Complete the organizingContainers function below.
+	static String organizingContainers(int[][] container) {
+		String output = "";
+		
+		int numContainers = container.length;
+		
+		for(int containerType=0;containerType<numContainers;containerType++) {
+			int ballType = 0;
+			
+			if (ballType == containerType) {
+				
+				continue;
+			}
+			for(int j=0;j<container[containerType][ballType];j++) {
+				
+			}
+		}
+		
+		return output;
+	}
+
+	public static void main(String[] args) throws IOException {
+		
+		int [][] container = new int[2][2];
+		
+		System.out.println(organizingContainers(container));
+	}
+}

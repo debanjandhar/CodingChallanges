@@ -1,0 +1,42 @@
+import java.io.IOException;
+
+public class TheGridSearch {
+
+	// Complete the gridSearch function below.
+	static String gridSearch(String[] G, String[] P) {
+		String yes = "YES";
+		String no = "NO";
+
+		int patternRowLength = P.length;
+		int patternIndex = 0;
+		int patternFirstOccurence = -1;
+		
+		for (int row = 0; row < G.length - patternRowLength; row++) {
+			String currRow = G[row];
+			if (currRow.contains(P[patternIndex])) {
+				int occurenceIndex = currRow.indexOf(P[patternIndex++]);
+				if (patternFirstOccurence != -1) {
+					if (patternFirstOccurence != occurenceIndex) {
+						
+					}
+				}else {
+					patternFirstOccurence = occurenceIndex;
+				}
+			}
+
+		}
+
+		return no;
+	}
+	
+	private static void matchPattern(String[] pattern, String Grid, int startRow) {
+		
+	}
+
+	public static void main(String[] args) throws IOException {
+
+		String[] G = new String[10];
+		String[] P = new String[10];
+		String result = gridSearch(G, P);
+	}
+}

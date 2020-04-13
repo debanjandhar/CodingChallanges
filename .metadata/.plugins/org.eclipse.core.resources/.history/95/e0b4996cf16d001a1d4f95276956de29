@@ -1,0 +1,53 @@
+import java.io.IOException;
+
+/**
+ * @author debanjandhar
+ *
+ *         Question :
+ *         https://www.hackerrank.com/challenges/largest-rectangle/problem
+ */
+public class LargestRectangle {
+
+	// Complete the largestRectangle function below.
+	static long largestRectangle(int[] h) {
+		long max = 0l;
+
+		// This array will contain
+		int[] newH = new int[h.length];
+		int numElements = h.length;
+
+		// Here we're comparing each element with previous element. If current element
+		// is first element, greater than or equal to previous element then inserting
+		// the element in new array. If the element is smaller than the previous element
+		// then we'll traverse backward until we find an element equal to or less than
+		// the current element, updating each element with the value of current index
+		// and calculating the max area in the process.
+		for (int i = 0; i < numElements; i++) {
+			if (i == 0) {
+				// This is the first index, so nothing to do
+				newH[i] = h[i];
+			} else if (h[i] >= h[i - 1]) {
+				newH[i] = h[i];
+			} else {
+				// current index is smaller than previous index
+				int tmpIndex = i;
+
+				while (tmpIndex > 0) {
+					if (h[tmpIndex] > h[tmpIndex - 1]) {
+						newH[tmpIndex] = h[tmpIndex];
+					}
+					tmpIndex--;
+				}
+			}
+		}
+
+		return max;
+
+	}
+
+	public static void main(String[] args) throws IOException {
+		int[] h = new int[] { 1, 2, 3 };
+
+		System.out.println(largestRectangle(h));
+	}
+}

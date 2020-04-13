@@ -1,0 +1,23 @@
+package com.odc.pricemng.validation.validators;
+
+import javax.validation.ConstraintValidator;
+import javax.validation.ConstraintValidatorContext;
+
+import com.odc.pricemng.fintechpricemanagerapi.entities.RequestParams;
+import com.odc.pricemng.validation.annotations.ValidateUser;
+
+public class UserValidator implements ConstraintValidator<ValidateUser, RequestParams> {
+
+	@Override
+	public void initialize(ValidateUser constraintAnnotation) {
+		// TODO Auto-generated method stub
+		ConstraintValidator.super.initialize(constraintAnnotation);
+	}
+	
+	@Override
+	public boolean isValid(RequestParams value, ConstraintValidatorContext context) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+}

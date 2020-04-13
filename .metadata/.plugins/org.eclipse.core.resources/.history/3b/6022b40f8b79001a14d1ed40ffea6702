@@ -1,0 +1,48 @@
+package com.odc.pricemng.validation.validators;
+
+import java.util.List;
+
+import javax.validation.ConstraintValidator;
+import javax.validation.ConstraintValidatorContext;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+
+import com.odc.pricemng.fintechpricemanagerapi.entities.RequestParams;
+import com.odc.pricemng.fintechpricemanagerapi.repositories.UsersRepository;
+import com.odc.pricemng.fintechpricemanagerapi.vos.UI_UsersVo;
+import com.odc.pricemng.validation.annotations.ValidateUser;
+
+@Component
+public class UserValidator implements ConstraintValidator<ValidateUser, RequestParams> {
+
+	private UsersRepository usersRepository;
+	private static final Logger LOGGER = LogManager.getLogger(UserValidator.class);
+
+	public UserValidator(UsersRepository ur) {
+		this.usersRepository = ur;
+	}
+
+	@Override
+	public boolean isValid(RequestParams value, ConstraintValidatorContext context) {
+		String uKey = value.getuKey();
+		String pKey = value.getpKey();
+		String application = value.getApplication();
+
+		List<UI_UsersVo> users = usersRepository.findByUserNameAndPasswordAndApplication(uKey, pKey, application);
+
+		if (CollectionUtils.isEmpty(users)) {
+			LOGGER.info("No user found for user with ukey[" + uKey + "] for application [" + application + "]");
+			return false;
+		}
+		if (users.size() > 1) {
+			LOGGER.info("No user found for user with ukey[" + uKey + "] for application [" + application + "]");
+			return false;
+		}
+
+		return true;
+	}
+
+}

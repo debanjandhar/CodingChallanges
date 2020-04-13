@@ -1,0 +1,28 @@
+import java.io.IOException;
+
+/**
+ * @author debanjandhar
+ * 
+ *         Question :
+ *         https://www.hackerrank.com/challenges/bigger-is-greater/problem
+ *
+ */
+public class BiggerisGreater {
+
+	// Complete the biggerIsGreater function below.
+	static String biggerIsGreater(String w) {
+		StringBuilder returnString = new StringBuilder();
+		int[] charInts = new int[w.length()];
+		
+		for(int i=0;i<w.length();i++) {
+			charInt[i] = w.charAt(i);
+		}
+
+		return returnString.toString();
+	}
+
+	public static void main(String[] args) throws IOException {
+
+		System.out.println(biggerIsGreater(""));
+	}
+}

@@ -1,0 +1,38 @@
+package com.odc.pricemng.exception;
+
+import javax.validation.ConstraintViolationException;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+	@ExceptionHandler({ ConstraintViolationException.class, APIException.class })
+	public ResponseEntity<String> handleException(Exception e) {
+		if (e instanceof APIException) {
+			// We know how to handle this and we're better than what we are doing
+			// currently!!
+			APIException apie = (APIException) e;
+			String errorString = apie.handleException();
+			HttpStatus status = apie.getErrorCode().getHttpStatus();
+
+			return getResponseFromException(errorString, status);
+		} else if (e instanceof ConstraintViolationException) {
+			// One of our validations have gone wrong
+			
+			ConstraintViolationException cve = (ConstraintViolationException) e;
+			String errorString  =  cve.getConstraintViolations().
+		} else {
+			// Ooops!! Don't know how do we handle this.
+			return getResponseFromException(e.getMessage(), HttpStatus.BAD_REQUEST);
+		}
+	}
+
+	protected ResponseEntity<String> getResponseFromException(String errorMsg, HttpStatus status) {
+		return new ResponseEntity<String>(errorMsg, status);
+	}
+
+}

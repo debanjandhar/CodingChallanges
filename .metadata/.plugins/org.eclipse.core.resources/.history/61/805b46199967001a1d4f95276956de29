@@ -1,0 +1,30 @@
+import java.io.IOException;
+import java.util.Scanner;
+
+public class TheGridSearch {
+
+	// Complete the gridSearch function below.
+	static String gridSearch(String[] G, String[] P) {
+		String yes = "YES";
+		String no = "NO";
+		
+		int patternRowLength = P.length;
+		int patternColumnLength = P[0].length();
+		
+		for (int row = 0; row < P.length; row++) {
+			String currRow = P[row];
+			
+		}
+		
+		return yes;
+	}
+
+	private static final Scanner scanner = new Scanner(System.in);
+
+	public static void main(String[] args) throws IOException {
+
+		String [] G = new String[10];
+		String [] P = new String[10];
+		String result = gridSearch(G, P);
+	}
+}

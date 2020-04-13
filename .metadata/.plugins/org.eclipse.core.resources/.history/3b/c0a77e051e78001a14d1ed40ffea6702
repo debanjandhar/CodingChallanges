@@ -1,0 +1,30 @@
+package hackerrank;
+
+import java.io.IOException;
+
+public class Test {
+	public static void main(String[] args) throws NumberFormatException, IOException {
+
+		int n = 12;
+		boolean found = false;
+		for (int a = n; a > 0; a--) {
+			int startB = (n - a) / 2;
+			for (int b = startB; b > 1; b--) {
+				int c = n - (a + b);
+				if (a == b) {
+					break;
+				}
+				System.out.println(a + "+" + b + "+" + c);
+				if ((a * a + b * b) == (c * c) && (a + b + c) == n) {
+					System.out.println(a * b * c);
+					found = true;
+					break;
+				}
+			}
+			if (found) {
+				break;s
+			}
+		}
+
+	}
+}

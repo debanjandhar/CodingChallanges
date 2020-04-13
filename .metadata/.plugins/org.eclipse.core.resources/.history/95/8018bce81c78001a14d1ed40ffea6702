@@ -1,0 +1,27 @@
+package hackerrank;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
+public class Test {
+	public static void main(String[] args) throws NumberFormatException, IOException {
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+
+		int t = Integer.parseInt(br.readLine());
+		for (int a0 = 0; a0 < t; a0++) {
+			int n = Integer.parseInt(br.readLine());
+			for (int a = n; a > 0; a--) {
+				int startB = n-a;
+				for (int b = n; b > 0; b--) {
+					for (int c = n; c > 0; c--) {
+						if ((a * a + b * b) == (c * c) && (a + b + c) == n) {
+							System.out.println(a * b * c);
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+}

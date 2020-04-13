@@ -1,0 +1,28 @@
+import java.util.Scanner;
+
+public class BinaryNumbers {
+
+	private static final Scanner scanner = new Scanner(System.in);
+
+	public static void main(String[] args) {
+		int n = 13;
+
+		String binaryStr = Integer.toBinaryString(n);
+		
+		char prevChar = ' ';
+		int count = 0;
+		int maxCount = Integer.MIN_VALUE;
+		for (int c = 0; c < binaryStr.length(); c++) {
+			char currChar = binaryStr.charAt(c);
+			if (currChar == prevChar) {
+				count++;
+				if (count > maxCount) {
+					maxCount = count;
+				}
+			}else {
+				count = 0;
+			}
+			
+		}
+	}
+}

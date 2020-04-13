@@ -1,0 +1,7 @@
+package com.oracle.odc.metis.config;
+
+public interface ConifgInterpreter {
+
+	
+	
+}

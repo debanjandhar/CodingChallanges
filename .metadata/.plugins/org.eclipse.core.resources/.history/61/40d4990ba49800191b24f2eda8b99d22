@@ -1,0 +1,971 @@
+package com.oracle.odc.metis.config;
+
+import static org.apache.spark.sql.functions.regexp_replace;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+
+import org.apache.spark.SparkException;
+import org.apache.spark.sql.AnalysisException;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+
+import com.oracle.odc.metis.engine.CustomBroadcast;
+import com.oracle.odc.metis.engine.Diff;
+import com.oracle.odc.metis.engine.Transpose;
+import com.oracle.odc.metis.exception.ConfigInterpretException;
+import com.oracle.odc.metis.exception.MetisErrorCode;
+import com.oracle.odc.metis.jsonparse.ColumnField;
+import com.oracle.odc.metis.jsonparse.DiffColumnPair;
+import com.oracle.odc.metis.jsonparse.DiffColumns;
+import com.oracle.odc.metis.jsonparse.DiffConfig;
+import com.oracle.odc.metis.jsonparse.JoinUpdateConfig;
+import com.oracle.odc.metis.jsonparse.LookupConfig;
+import com.oracle.odc.metis.jsonparse.MetisConfig;
+import com.oracle.odc.metis.jsonparse.NotifyConfigFields;
+import com.oracle.odc.metis.jsonparse.OptionalNotificationParamsConfigFields;
+import com.oracle.odc.metis.jsonparse.ParsedConfig;
+import com.oracle.odc.metis.jsonparse.ReadConfigFields;
+import com.oracle.odc.metis.jsonparse.SparkSqlConfigFields;
+import com.oracle.odc.metis.jsonparse.TransposeConfig;
+import com.oracle.odc.metis.jsonparse.WeigthingsField;
+import com.oracle.odc.metis.jsonparse.WriteConfigFields;
+import com.oracle.odc.metis.metisfilesystem.DataSourceFactory;
+import com.oracle.odc.metis.metisfilesystem.helpers.DatasetReadArgs;
+import com.oracle.odc.metis.metisfilesystem.helpers.DatasetWriteArgs;
+import com.oracle.odc.metis.metisfilesystem.models.DataSource;
+import com.oracle.odc.metis.notification.AggregatedNotifyConfigs;
+import com.oracle.odc.metis.notification.MetisNotification;
+import com.oracle.odc.metis.notification.PushGatewayMetisNotification;
+import com.oracle.odc.metis.utils.ColumnInfo;
+import com.oracle.odc.metis.utils.Constants;
+import com.oracle.odc.metis.utils.MetisLogger;
+import com.oracle.odc.metis.utils.SparkUtils;
+
+public class DefaultConfigInterpreter implements ConfigInterpreter {
+	private static final MetisLogger logger = new MetisLogger(DefaultConfigInterpreter.class);
+
+	protected ParsedConfig parsedConfig;
+	protected List<String> tableNames;
+	protected HashMap<String, Dataset> dfMap;
+
+	protected static SparkSession sparkSession = null;
+	protected static String env = null;
+	protected static HashMap<String, DataType> str2TypeMap = null;
+
+	public DefaultConfigInterpreter(ParsedConfig configParser, String env) {
+		this.parsedConfig = configParser;
+		DefaultConfigInterpreter.env = env;
+		this.dfMap = new HashMap<String, Dataset>();
+		this.tableNames = new ArrayList<String>();
+		createStr2TypeMap();
+	}
+
+	/*
+	 * PLEASE read before you add code to this method!!! Add your code to this
+	 * method ONLY if you will introduce: 1) a new config section in config json AND
+	 * 2)an action that is generic and can be applied to all config files/jobs
+	 * Otherwise, please do the following steps: 1. provide a unique configName in
+	 * your json config file, example config file:
+	 * src/main/resouces/prod/audience_core_legacy.json 2. create a new subclass
+	 * which extends this ConfigInterpreter class and add your custom code there,
+	 * Example subclass: UwfConfigInterpreter.java. 3. add a case in
+	 * ConfigInterpreterFactory.java 4. now you are ready to use
+	 * ConfigInterpreterFactory to instantiate your custom config interpreter class!
+	 */
+
+	public void interpret() throws ConfigInterpretException {
+		try {
+
+			// NOTE : Additional features will be added or uncommented in future versions.
+
+			// interpret read config fields
+			if (!isReadSectionSpecified()) {
+				logger.error("read section is not sepecified in config.");
+				return;
+			} else
+				read();
+
+			// interpret transpose fields
+//			if (isTransposeSectionSpecified(parsedConfig)) {
+//				logger.info("INFO: interpreting transpose section..");
+//				interpretTranspose();
+//			}
+
+			if (isJoinSectionSpecified()) {
+				logger.info("interpreting join section..");
+				join();
+			}
+
+			// interpret diff
+
+//			if (isDiffSectionSpecified() && isJoinSectionSpecified()) {
+//				logger.info("INFO: interpreting diff section..");
+//				interpretDiff();
+//			}
+
+			// interpret lookup
+//			if (isLookupSectionSpecified()) {
+//				logger.info("INFO: interpreting lookup section..");
+//				interpretLookup();
+//			}
+
+			// interpret weightings section for modeling files
+//			if (isWeightingsSectionSpecified()) {
+//				logger.info("INFO: interpreting weightings section..");
+//				interpretWeightings();
+//
+//			}
+
+			logger.info("write output..");
+			write();
+
+		} catch (ConfigInterpretException cie) {
+			throw new ConfigInterpretException("Error encountered in Default Config Interpreter", cie);
+		} finally {
+			// drop dataframes
+			logger.info("dropping all data frames..");
+			dropDataframes();
+		}
+	}
+
+	private boolean isValidSequence(MetisConfig config, Integer sequenceId) throws ConfigInterpretException {
+
+		// Sequence Id should be >=1
+		if (sequenceId != null && sequenceId < 1) {
+			throw new ConfigInterpretException("Sequence Id should be greater that 1. Given sequence id ["
+					+ config.getSequenceId() + "] for table name [" + config.getTableName() + "]",
+					MetisErrorCode.USER_CONFIG_EXCEPTION);
+		}
+
+		// This will handle both ideal and null scenarios
+		if (config.getSequenceId() == sequenceId) {
+			logger.info("Sequence id [" + config.getSequenceId() + "] for table name [" + config.getTableName()
+					+ "] is valid.");
+			return true;
+		} else {
+			logger.warn("Sequence id [" + config.getSequenceId() + "] for table name [" + config.getTableName()
+					+ "] is not valid.");
+			return false;
+		}
+	}
+
+	private void generateNotification(MetisConfig config) throws ConfigInterpretException {
+		List<NotifyConfigFields> ncf = parsedConfig.getNotify();
+		List<OptionalNotificationParamsConfigFields> optNotifyParams = config.getOptionalNotificationParams();
+		AggregatedNotifyConfigs anc = new AggregatedNotifyConfigs();
+		MetisNotification notification = new PushGatewayMetisNotification();
+
+		// Check if notification has to be generated.
+		if (optNotifyParams == null || optNotifyParams.isEmpty()) {
+			logger.warn("No optionalNotificationParamsConfigFields specified for config with tablename ["
+					+ config.getTableName() + "]");
+			return;
+		}
+
+		// If notification has to be generated then check for each
+		// optNotificationParama, which identifier is used in the given config
+		for (OptionalNotificationParamsConfigFields optionalNotificationParamsConfigFields : optNotifyParams) {
+
+			// Check if the optional notification param section is properly specified.
+			if (isEmpty(optionalNotificationParamsConfigFields.getIdentifier())) {
+				throw new ConfigInterpretException(
+						"No identifier specified for notification params in config with table name ["
+								+ config.getTableName() + "]",
+						MetisErrorCode.USER_CONFIG_EXCEPTION);
+			} else if (isEmpty(optionalNotificationParamsConfigFields.getColumnName())) {
+				throw new ConfigInterpretException(
+						"No column name specified for notification params in config with table name ["
+								+ config.getTableName() + "] using identifier ["
+								+ optionalNotificationParamsConfigFields.getIdentifier() + "]",
+						MetisErrorCode.USER_CONFIG_EXCEPTION);
+			} else if (isEmpty(optionalNotificationParamsConfigFields.getDescription())) {
+				logger.warn("No description specified for notification params in config with table name ["
+						+ config.getTableName() + "] and column name ["
+						+ optionalNotificationParamsConfigFields.getColumnName() + "]");
+			}
+
+			for (NotifyConfigFields notifyConfigFields : ncf) {
+
+				// Check if current notify config field is referred in the given metisConfig
+				if (optionalNotificationParamsConfigFields.getIdentifier().equals(notifyConfigFields.getIdentifier())) {
+					logger.info("Generating notification for tablename [" + config.getTableName()
+							+ "] with notify identifier [" + notifyConfigFields.getIdentifier() + "]");
+
+					anc.setColumnName(optionalNotificationParamsConfigFields.getColumnName());
+					anc.setConfigName(parsedConfig.getConfigName());
+					anc.setCustomLabelList(notifyConfigFields.getCustomLabels());
+					anc.setDescription(optionalNotificationParamsConfigFields.getDescription());
+					
+					// Send individual notification for each optionalNotificationalParams because
+					// identifier attached to them might be different in each iteration
+					notification.push(anc);
+				}
+			}
+		}
+	}
+	
+	private List<String> fetchErrorValues(String tableName, String columnName) {
+		
+		
+
+	}
+
+	private boolean isEmpty(String str) {
+		if (str == null || str.equals("")) {
+			return false;
+		}
+
+		return true;
+	}
+
+	private void createStr2TypeMap() {
+		str2TypeMap = new HashMap<String, DataType>();
+		str2TypeMap.put(Constants.TYPE_STRING, DataTypes.StringType);
+		str2TypeMap.put(Constants.TYPE_INTEGER, DataTypes.IntegerType);
+		str2TypeMap.put(Constants.TYPE_BINARY, DataTypes.BinaryType);
+		str2TypeMap.put(Constants.TYPE_BOOLEAN, DataTypes.BooleanType);
+		str2TypeMap.put(Constants.TYPE_DOUBLE, DataTypes.DoubleType);
+		str2TypeMap.put(Constants.TYPE_DATE, DataTypes.DateType);
+		str2TypeMap.put(Constants.TYPE_FLOAT, DataTypes.FloatType);
+		str2TypeMap.put(Constants.TYPE_TIMESTAMP, DataTypes.TimestampType);
+		str2TypeMap.put(Constants.TYPE_CALENDAR_INTERVAL, DataTypes.CalendarIntervalType);
+		str2TypeMap.put(Constants.TYPE_BYTE, DataTypes.ByteType);
+		str2TypeMap.put(Constants.TYPE_LONG, DataTypes.LongType);
+		str2TypeMap.put(Constants.TYPE_STRING_MULTIPLE_LINES, DataTypes.StringType);
+		str2TypeMap.put(Constants.TYPE_DECIMAL, DataTypes.createDecimalType(12, 10));
+	}
+
+	protected static SparkSession getSparkSession() {
+		if (sparkSession == null) {
+			sparkSession = SparkUtils.createSparkSession(env);
+		}
+		SparkUtils.setLogLevel(sparkSession, Constants.ERROR);
+		return sparkSession;
+	}
+
+	private void createDataframe(ReadConfigFields readConfigFields) throws ConfigInterpretException {
+		String tableName = readConfigFields.getTableName();
+		List<String> uniqueKeys = readConfigFields.getUniqueKeys();
+		String importFileFormat = readConfigFields.getImportFileFormat();
+		String importFileLocation = readConfigFields.getImportFileLocation();
+		String delim = readConfigFields.getImportDelimeter();
+		List<ColumnField> importFields = readConfigFields.getImportFields();
+		String header = readConfigFields.getHeader();
+		if (header == null)
+			header = "false";
+		boolean hasCompositeId = hasCompositeId(importFields);
+
+		List<ColumnInfo> columnInfoList = new ArrayList<ColumnInfo>();
+		List<ColumnInfo> tempColumnInfoAsAllStringList = new ArrayList<>();
+		for (int i = 0; i < importFields.size(); i++) {
+			String type = importFields.get(i).getColType();
+			if (str2TypeMap.containsKey(type)) {
+				String colName = importFields.get(i).getColName();
+				String newColName = importFields.get(i).getNewColName();
+				ColumnInfo info = null;
+				// Convert "value" column into StringType since input data
+				// of
+				// table "audience_attribute"
+				// may contain mix of DataType, StringType and numeric type,
+				// which will crash IE.
+				if (isTransposeSectionSpecified(parsedConfig)
+						&& tableName.contains(parsedConfig.getTranspose().getSparkTableName())
+						&& colName.contains("value")) {
+					info = new ColumnInfo(colName, newColName, str2TypeMap.get("StringType"));
+				} else {
+					info = new ColumnInfo(colName, newColName, str2TypeMap.get(type));
+				}
+				tempColumnInfoAsAllStringList.add(new ColumnInfo(colName, newColName, str2TypeMap.get("StringType")));
+				columnInfoList.add(info);
+			} else {
+				throw new ConfigInterpretException("Failed to create Dataset. Wrong types for column name ["
+						+ importFields.get(i).getColName() + "]");
+			}
+		}
+
+		DataSource importFileLocDataSource = DataSourceFactory.getDataSource(importFileLocation);
+
+		Dataset input = importFileLocDataSource.readAsSparkDataset(new DatasetReadArgs(getSparkSession(),
+				tempColumnInfoAsAllStringList, columnInfoList, importFileFormat, delim, header));
+
+		if (input == null) {
+			throw new ConfigInterpretException("A null dataframe is created from import location ["
+					+ importFileLocDataSource.getDataSourcePath() + "]");
+		}
+
+		try {
+			// remove newline characters from column values
+			for (int i = 0; i < importFields.size(); i++) {
+				String colName = importFields.get(i).getColName();
+				String type = importFields.get(i).getColType();
+				if (type.equals(Constants.TYPE_STRING_MULTIPLE_LINES)) {
+					input = input.withColumn(colName, regexp_replace(input.col(colName), "\n", " "));
+				}
+			}
+			String[] columnNames = input.columns();
+
+			final List<String> list = new ArrayList<String>();
+			Collections.addAll(list, columnNames);
+
+			list.remove("version_prev");
+			columnNames = list.toArray(new String[list.size()]);
+
+			Dataset uniqueDataset = input.dropDuplicates(columnNames);
+
+			logger.info("creating dataset..");
+
+			logger.info("tableName:" + tableName);
+			uniqueDataset.show(20);
+			SparkUtils.createTempTable(uniqueDataset, tableName);
+			dfMap.put(tableName, uniqueDataset);
+
+			logger.info("creating dataset '" + tableName);
+//			if (logger.isDebugEnabled())
+//				uniqueDataset.show(20);
+
+		} catch (IllegalArgumentException e) {
+			throw new ConfigInterpretException("IllegalArgumentException when creating dataset", e);
+		} catch (Exception e) {
+			throw new ConfigInterpretException("Exception when creating dataset", e);
+		}
+	}
+
+	private boolean hasCompositeId(List<ColumnField> importFields) {
+		if (importFields == null || importFields.isEmpty())
+			return false;
+		for (ColumnField columnField : importFields) {
+			if (columnField.getColName().equals("composite_id"))
+				return true;
+		}
+		return false;
+	}
+
+	private boolean hasCHubVersion(List<ColumnField> importFields) {
+		if (importFields == null || importFields.isEmpty())
+			return false;
+		for (ColumnField columnField : importFields) {
+			if (columnField.getColName().equals("chub_version"))
+				return true;
+		}
+		return false;
+	}
+
+	private void joinDataframes(SparkSqlConfigFields joinConfig) throws ConfigInterpretException {
+		String query = joinConfig.getQuery();
+		String resultTableName = joinConfig.getTableName();
+
+		// TODO partition before join in Q2
+		// if (!partition(partitionKeys))
+		// return false;
+
+		Dataset result;
+		try {
+			result = SparkUtils.join(getSparkSession(), query);
+		} catch (AnalysisException | SparkException e) {
+			throw new ConfigInterpretException("Spark error encountered with query [" + query + "]", e,
+					MetisErrorCode.CONFIG_INTERPRETER_JOIN_EXCEPTION);
+		} catch (Exception e) {
+			throw new ConfigInterpretException("Unknown exception encountered with query [" + query + "]", e,
+					MetisErrorCode.CONFIG_INTERPRETER_JOIN_EXCEPTION);
+		}
+		logger.info("join result...");
+		logger.info("resultTableName:" + resultTableName);
+
+//		if (logger.isDebugEnabled())
+//			result.show(20);
+
+		result = result.distinct();
+
+		try {
+			SparkUtils.createTempTable(result, resultTableName);
+			dfMap.put(resultTableName, result);
+		} catch (Exception e) {
+			logger.error("Error when creating temp table: " + e);
+			throw new ConfigInterpretException("Error while registering temp table [" + resultTableName + "]", e,
+					MetisErrorCode.CONFIG_INTERPRETER_JOIN_EXCEPTION);
+		}
+	}
+
+	// Assumption: each table only has one partition key, and order of
+	// the partition keys in "partitionBy" in the config file matches
+	// the order of tables specified in the "Read" section of the config file.
+	private boolean partition(List<String> partitionKeys) {
+		try {
+			if (tableNames.size() != partitionKeys.size()) {
+				logger.warn("Please specify right number of partition keys.");
+				return false;
+			}
+			for (int i = 0; i < partitionKeys.size(); i++) {
+				if (partitionKeys.get(i) == "")
+					continue;
+				String tableName = tableNames.get(i);
+				Dataset partitionedDf = SparkUtils.partition(dfMap.get(tableName), partitionKeys.get(i));
+				SparkUtils.dropTempTable(getSparkSession(), tableName);
+				SparkUtils.createTempTable(partitionedDf, tableName);
+			}
+		} catch (Exception e) {
+			logger.error("Error encountered in partition of DefaultConfigInterpreter", e);
+			return false;
+		}
+
+		return true;
+	}
+
+	public void interpretTranspose() throws ConfigInterpretException {
+		TransposeConfig tranposeConfig = parsedConfig.getTranspose();
+		String tableName = tranposeConfig.getSparkTableName();
+		List<String> groupByColumns = tranposeConfig.getGroupByColumns();
+		String keyColumn = tranposeConfig.getKeyColumn();
+		String valueColumn = tranposeConfig.getValueColumn();
+
+		Dataset df = dfMap.get(tableName);
+		if (df == null) {
+			throw new ConfigInterpretException("Could not find table for transpose");
+
+		}
+
+		Dataset transposedDf = null;
+		try {
+			transposedDf = Transpose.transpose(getSparkSession(), df, tableName, groupByColumns, keyColumn,
+					valueColumn);
+			if (transposedDf == null)
+				throw new ConfigInterpretException("transposedDf is null.");
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new ConfigInterpretException(e.getMessage());
+
+		}
+		dfMap.put(tableName, transposedDf);
+
+	}
+
+	public void interpretDiff() throws ConfigInterpretException {
+		SparkSqlConfigFields joinConfig = parsedConfig.getSparkSqlQuery().get(0);
+		DiffConfig diffConfig = parsedConfig.getDiff();
+
+		String currentTable = diffConfig.getCurrentTable();
+		String previousTable = diffConfig.getPreviousTable();
+		String historicalTable = diffConfig.getHistoricalTable();
+		String joinResult = diffConfig.getJoinResult();
+		String creationDateRequired = diffConfig.getCreationDateRequired();
+		String historyExportLocation = diffConfig.getHistoryExportLocation();
+		String creationDateColFromPrevTable = diffConfig.getPreviousTableCreationDateColName();
+		List<DiffColumns> columnsToBeDiffed = diffConfig.getColumnsToBeDiffed();
+
+		if (!dfMap.containsKey(currentTable)) {
+			throw new ConfigInterpretException(
+					"Diff error: cannot find dataset for currentTable '" + currentTable + "'");
+
+		}
+		if (!dfMap.containsKey(previousTable)) {
+			throw new ConfigInterpretException(
+					"Diff error: cannot find dataset for previousTable '" + previousTable + "'");
+
+		}
+		if (!dfMap.containsKey(historicalTable)) {
+			throw new ConfigInterpretException(
+					"Diff error: cannot find dataset for historicalTable '" + historicalTable + "'");
+
+		}
+
+		if (!dfMap.containsKey(joinResult)) {
+			throw new ConfigInterpretException("Diff error: cannot find dataset for joinResult '" + joinResult + "'");
+
+		}
+		Dataset currentDf = dfMap.get(currentTable);
+		Dataset historicalDf = dfMap.get(historicalTable);
+		Dataset joinResultDf = dfMap.get(joinResult);
+
+		List<DiffColumnPair> diffColumns = new ArrayList<DiffColumnPair>();
+		for (int i = 0; i < columnsToBeDiffed.size(); i++) {
+			logger.info(columnsToBeDiffed.get(i).getPrevColName() + " : " + columnsToBeDiffed.get(i).getCurrColName());
+			DiffColumnPair diffColPair = new DiffColumnPair(columnsToBeDiffed.get(i).getPrevColName(),
+					columnsToBeDiffed.get(i).getCurrColName());
+			diffColumns.add(diffColPair);
+			logger.info(diffColPair.currColName + ":" + diffColPair.prevColName);
+		}
+		Dataset diffDf = null;
+		try {
+
+			// In case current date is required by other methods then this logic can be
+			// moved
+			// into constructor of this class
+			String pattern = "yyyy-MM-dd";
+			SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
+
+			String currentDate = simpleDateFormat.format(new Date());
+
+			Diff diffObj = new Diff(creationDateRequired.contains("true") ? true : false, currentDate);
+			diffDf = diffObj.computeDiff(getSparkSession(), joinResultDf, currentDf, historicalDf,
+					historyExportLocation, creationDateColFromPrevTable, diffColumns);
+			if (diffDf == null)
+				throw new ConfigInterpretException("error in compute diff, diffDf is null");
+
+			logger.info("diffDf :");
+//			if (logger.isDebugEnabled())
+//				diffDf.show(20);
+
+			dfMap.put(currentTable, diffDf);
+			SparkUtils.createTempTable(diffDf, currentTable);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new ConfigInterpretException(e.getMessage());
+		}
+
+	}
+
+	public void interpretLookup() throws ConfigInterpretException {
+		try {
+			LookupConfig lookupConfig = parsedConfig.getLookup();
+			String lookupTableName = lookupConfig.getLookupTableName();
+			String lookupKeyColumn = lookupConfig.getLookupKeyColumn();
+			String lookupValueColumn = lookupConfig.getLookupValueColumn();
+			String tableNameForUpdate = lookupConfig.getTableNameForUpdate();
+			String keyColumnFromUpdateTable = lookupConfig.getKeyColumnFromUpdateTable();
+			String columnToBeUpdated = lookupConfig.getColumnToBeUpdated();
+
+			Dataset left = dfMap.get(tableNameForUpdate);
+			if (left == null) {
+				throw new ConfigInterpretException("ERROR: Cannot find tableNameForUpdate in Lookup section.");
+
+			}
+			Dataset lookup = dfMap.get(lookupTableName);
+			if (lookup == null) {
+				throw new ConfigInterpretException("ERROR: Cannot find lookupTableName in Lookup section.");
+
+			}
+
+			CustomBroadcast cb = new CustomBroadcast();
+			Dataset result = cb.lookupAndUpdate(getSparkSession(), left, lookup, keyColumnFromUpdateTable,
+					columnToBeUpdated, lookupKeyColumn, lookupValueColumn);
+			dfMap.put(tableNameForUpdate, result);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new ConfigInterpretException(e.getMessage());
+
+		}
+
+	}
+
+	// Changes for Custom Executor
+//	private void interpretCustomExecutor() throws ConfigInterpretException {
+//		List<CustomExecutorConfig> cec = parsedConfig.getCustomExecutorConfig();
+//
+//		for (CustomExecutorConfig customExecutorConfig : cec) {
+//			Dataset newDS = dfMap.get(customExecutorConfig.getInputTableName()).alias("tempTable");
+//
+//			ExpressionEncoder<Row> encoder = RowEncoder.apply(newDS.schema());
+//
+//			Dataset newDsV1 = newDS.map(new CustomExecutorTask(initializeClass(customExecutorConfig.getClassName()),
+//					customExecutorConfig.getInputColumnNames()), encoder);
+//
+//			newDsV1.show();
+//		}
+//	}
+//
+//	private CustomExecutor initializeClass(String clazz) throws ConfigInterpretException {
+//
+//		try {
+//			Class customClass = Class.forName(clazz);
+//			return (CustomExecutor) customClass.newInstance();
+//		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+//			throw new ConfigInterpretException("Error while intializing CustomExecutor class[" + clazz + "]", e);
+//
+//		}
+//
+//	}
+
+	private void interpretJoinAndUpdate() throws ConfigInterpretException {
+		List<JoinUpdateConfig> joinUpdateConfigs = parsedConfig.getJoinAndUpdate();
+		for (JoinUpdateConfig joinUpdateConfig : joinUpdateConfigs) {
+			String leftTable = joinUpdateConfig.getLeftTable();
+			String leftTableKey = joinUpdateConfig.getLeftTableKey();
+			String rightTable = joinUpdateConfig.getRightTable();
+			String rightTableKey = joinUpdateConfig.getRightTableKey();
+			String updateColName = joinUpdateConfig.getUpdateColName();
+			String updatedTable = joinUpdateConfig.getUpdatedTable();
+			String updateValue = joinUpdateConfig.getUpdateValue();
+
+			try {
+				Dataset left = dfMap.get(leftTable);
+				if (left == null) {
+					throw new ConfigInterpretException("Cannot find leftTable in joinAndUpdate section.");
+
+				}
+				Dataset right = dfMap.get(rightTable);
+				if (right == null) {
+					throw new ConfigInterpretException("Cannot find rightTable in joinAndUpdate section.");
+
+				}
+
+				CustomBroadcast cb = new CustomBroadcast();
+				Dataset result = cb.joinAndUpdate(getSparkSession(), left, right, leftTableKey, updateColName,
+						rightTableKey, updateValue);
+				logger.info("Joinandupdate result is:");
+
+				if (result == null) {
+					logger.error("joinandupdate result is null");
+					throw new ConfigInterpretException("Cannot join and update table in joinAndUpdate section.");
+
+				} else {
+
+					logger.info("Result is not null");
+//					if (logger.isDebugEnabled())
+//						result.show(20);
+				}
+
+				/*
+				 * left.show(); right.show(); result.show();
+				 * result.select(updateColName).show();
+				 */
+				dfMap.put(updatedTable, result);
+
+			} catch (Exception e) {
+				logger.error("Error occured in join and update of DefaultConfigInterpreter", e);
+				throw new ConfigInterpretException(e.getMessage());
+
+			}
+		}
+
+	}
+
+//	public void interpretWeightings() throws ConfigInterpretException {
+//		List<WeigthingsField> fields = parsedConfig.getWeightings();
+//		for (WeigthingsField field : fields) {
+//			String type = field.getPercentageType();
+//			List<String> inputTables = field.getInputTable();
+//			List<String> outputTables = field.getOutputTable();
+//			try {
+//				if (type.equals(Constants.WEIGHTINGS_PERCENTAGE_TYPE_SIMPLE)) {
+//					if (inputTables.size() == 0 || inputTables.size() == 1 && inputTables.get(0).equals("")
+//							|| outputTables.size() == 0 || outputTables.size() == 1 && outputTables.get(0).equals(""))
+//						continue; // continue on next field
+//					Dataset inputDf = dfMap.get(inputTables.get(0));
+//					if (inputDf == null) {
+//						throw new ConfigInterpretException("ERROR: Cannot find inputDf in weightings section.");
+//
+//					}
+//					Dataset outputDf = Weightings.addWeightingsSimple(getSparkSession(), inputDf,
+//							Constants.COLUMN_NAME_MODELED_AUDIENCE_ID, Constants.COLUMN_NAME_WEIGHTING);
+//					dfMap.put(outputTables.get(0), outputDf);
+//
+//				} else if (type.equals(Constants.WEIGHTINGS_PERCENTAGE_TYPE_COMPLEX)) {
+//					if (inputTables.size() < 2) {
+//						logger.error(
+//								"ERROR: In weightings section, need to specify both curated input and provider map input table names.");
+//						continue; // continue on next field
+//					}
+//					if (outputTables.size() < 2) {
+//						logger.error(
+//								"ERROR: In weightings section, need to specify both curated input and provider map output table names.");
+//						continue; // continue on next field
+//					}
+//					Dataset dfCuratedInput = dfMap.get(inputTables.get(0));
+//					Dataset dfProviderMap = dfMap.get(inputTables.get(1));
+//					WeightingCalculationComplex weightingCal = new WeightingCalculationComplex();
+//					HashMap<String, Dataset> res = weightingCal.calWeightingForCurated(getSparkSession(), dfProviderMap,
+//							dfCuratedInput);
+//					dfMap.put(outputTables.get(0), res.get("curated_recursive_result"));
+//					dfMap.put(outputTables.get(1), res.get("provider_map_result"));
+//
+//				} else {
+//					logger.error("ERROR: In weightings section, percentageType '" + type + "' is not supported.");
+//					continue; // continue on next field
+//				}
+//
+//			} catch (Exception e) {
+//				logger.error(e);
+//				e.printStackTrace();
+//				throw new ConfigInterpretException(e.getMessage());
+//			}
+//		}
+//
+//	}
+
+	private void writeConfig(WriteConfigFields writeConfig) throws ConfigInterpretException {
+		String tableName = writeConfig.getTableName();
+		String exportFileFormat = writeConfig.getExportFileFormat();
+		String exportFileLocation = writeConfig.getExportFileLocation();
+		String exportFilename = writeConfig.getExportFilename();
+		String exportDelimeter = writeConfig.getExportDelimeter();
+		String coalesce = writeConfig.getCoalesce();
+		String header = writeConfig.getHeader();
+
+		Dataset df = dfMap.get(tableName);
+
+		logger.info("Write table name: " + tableName);
+
+		Dataset originalDataset = dfMap.get(tableName);
+
+		if (originalDataset == null) {
+			throw new ConfigInterpretException("Unable to get Dataframe '" + tableName + "'",
+					MetisErrorCode.CONFIG_INTERPRETER_WRITE_EXCEPTION);
+		}
+
+		String[] columnNames = originalDataset.columns();
+
+		final List<String> list = new ArrayList<String>();
+		Collections.addAll(list, columnNames);
+
+		// list.remove("version");
+		// TODO Verify why dropDuplicates was added. Will it cause problems?
+		columnNames = list.toArray(new String[list.size()]);
+		Dataset uniqueDataset = originalDataset.dropDuplicates(columnNames);
+		try {
+			DatasetWriteArgs datasetWriteArgs = null;
+			DataSource exportDirDataSource = DataSourceFactory.getDataSource(exportFileLocation);
+			if (coalesce != null && coalesce.equalsIgnoreCase("true")) {
+				datasetWriteArgs = new DatasetWriteArgs(uniqueDataset, exportFileFormat, exportDelimeter,
+						Constants.OVERWRITE, true, false);
+			} else if (header != null && header.equalsIgnoreCase("false")) {
+				datasetWriteArgs = new DatasetWriteArgs(uniqueDataset, exportFileFormat, exportDelimeter,
+						Constants.OVERWRITE, false, true);
+			} else {
+				datasetWriteArgs = new DatasetWriteArgs(uniqueDataset, exportFileFormat, exportDelimeter,
+						Constants.OVERWRITE, false, false);
+			}
+
+			exportDirDataSource.writeSparkDataset(datasetWriteArgs);
+		} catch (Exception e) {
+			throw new ConfigInterpretException(MetisErrorCode.CONFIG_INTERPRETER_WRITE_EXCEPTION, e);
+		}
+	}
+
+	protected void dropDataframes() {
+		if (dfMap != null && !dfMap.isEmpty()) {
+			for (String tableName : dfMap.keySet()) {
+				SparkUtils.dropTempTable(getSparkSession(), tableName);
+			}
+		}
+	}
+
+	protected boolean isReadSectionSpecified() {
+		List<ReadConfigFields> readConfigFieldsList = parsedConfig.getRead();
+		if (readConfigFieldsList == null) {
+			logger.info("Read section is not specified.");
+			return false;
+		}
+		for (int i = 0; i < readConfigFieldsList.size(); i++) {
+			ReadConfigFields readConfig = readConfigFieldsList.get(i);
+			if (readConfig == null) {
+				logger.info("Read section item is not specified.");
+				return false;
+			}
+			if (readConfig.getTableName() == "") {
+				logger.info("Read section table is not specified.");
+				return false;
+			}
+		}
+		return true;
+	}
+
+	protected boolean isWriteSectionSpecified(ParsedConfig configParser) {
+		List<WriteConfigFields> writeConfigFieldsList = configParser.getWrite();
+		if (writeConfigFieldsList == null) {
+			logger.info("Write section is not specified.");
+			return false;
+		}
+		for (int i = 0; i < writeConfigFieldsList.size(); i++) {
+			WriteConfigFields writeConfig = writeConfigFieldsList.get(i);
+			if (writeConfig == null) {
+				logger.info("Write section item is not specified.");
+				return false;
+			}
+			if (writeConfig.getTableName() == "") {
+				logger.info("Write section table is not specified.");
+				return false;
+			}
+		}
+		return true;
+	}
+
+	protected boolean isJoinSectionSpecified() {
+		List<SparkSqlConfigFields> joinConfigs = parsedConfig.getSparkSqlQuery();
+		if (joinConfigs == null) {
+			logger.info("Join section is not specified.");
+			return false;
+		}
+		for (int i = 0; i < joinConfigs.size(); i++) {
+			SparkSqlConfigFields joinConfig = joinConfigs.get(i);
+			if (joinConfig == null) {
+				logger.info("Join section item is not specified.");
+				return false;
+			}
+			if (joinConfig.getQuery() == "") {
+				logger.info("Join section query is not specified.");
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean isTransposeSectionSpecified(ParsedConfig configParser) {
+		TransposeConfig transposeConfig = configParser.getTranspose();
+		if (transposeConfig == null) {
+//			logger.info("INFO: Transpose section is not specified.");
+			return false;
+		}
+		if (transposeConfig.getSparkTableName() == "") {
+			logger.info("Transpose section table is not specified.");
+			return false;
+		}
+		return true;
+	}
+
+	protected boolean isDiffSectionSpecified() {
+		DiffConfig diffConfig = parsedConfig.getDiff();
+		if (diffConfig == null) {
+			logger.info("Diff section is not specified.");
+			return false;
+		}
+		if (diffConfig.getCurrentTable() == "") {
+			logger.info("Diff section table is not specified.");
+			return false;
+		}
+		return true;
+	}
+
+	protected boolean isLookupSectionSpecified() {
+		LookupConfig lookupConfig = parsedConfig.getLookup();
+		if (lookupConfig == null) {
+			logger.info("Lookup section is not specified.");
+			return false;
+		}
+		if (lookupConfig.getLookupTableName() == "") {
+			logger.info("Lookup table is not specified.");
+			return false;
+		}
+		return true;
+	}
+
+	protected boolean isJoinAndUpdateSectionSpecified() {
+		List<JoinUpdateConfig> joinUpdateConfigs = parsedConfig.getJoinAndUpdate();
+		if (joinUpdateConfigs == null) {
+			logger.info("joinAndUpdate section is not specified.");
+			return false;
+		}
+		for (JoinUpdateConfig joinUpdateConfig : joinUpdateConfigs) {
+			if (joinUpdateConfig == null || joinUpdateConfig.getLeftTable() == "") {
+				logger.info("joinAndUpdate table is not specified.");
+				return false;
+			}
+		}
+		return true;
+	}
+
+	protected boolean isWeightingsSectionSpecified() {
+		List<WeigthingsField> fields = parsedConfig.getWeightings();
+		if (fields == null) {
+			logger.info("Weightings section is not specified.");
+			return false;
+		}
+		for (WeigthingsField field : fields) {
+			if (field == null || field.getPercentageType() == "") {
+				logger.info("Weightings table is not specified.");
+				return false;
+			}
+		}
+		return true;
+	}
+
+	@Override
+	public void read() throws ConfigInterpretException {
+		read(null);
+	}
+
+	public void read(Integer sequenceId) throws ConfigInterpretException {
+
+		List<ReadConfigFields> readConfigFieldsList = parsedConfig.getRead();
+		for (int i = 0; i < readConfigFieldsList.size(); i++) {
+			ReadConfigFields readConfig = readConfigFieldsList.get(i);
+
+			// Check if the join config has to be executed on the basis of sequence id
+			if (!isValidSequence(readConfig, sequenceId)) {
+				continue;
+			}
+
+			tableNames.add(readConfig.getTableName());
+			createDataframe(readConfig);
+
+		}
+
+	}
+
+	@Override
+	public void write() throws ConfigInterpretException {
+		write(null);
+	}
+
+	public void write(Integer sequenceId) throws ConfigInterpretException {
+		if (isWriteSectionSpecified(parsedConfig)) {
+			List<WriteConfigFields> writeConfigFieldsList = parsedConfig.getWrite();
+			for (int i = 0; i < writeConfigFieldsList.size(); i++) {
+				WriteConfigFields writeConfig = writeConfigFieldsList.get(i);
+
+				// Check if the join config has to be executed on the basis of sequence id
+				if (!isValidSequence(writeConfig, sequenceId)) {
+					continue;
+				}
+
+				writeConfig(writeConfig);
+			}
+		}
+	}
+
+	public void join() throws ConfigInterpretException {
+		join(null);
+	}
+
+	public void join(Integer sequenceId) throws ConfigInterpretException {
+		List<SparkSqlConfigFields> joinList = parsedConfig.getSparkSqlQuery();
+		for (int i = 0; i < joinList.size(); i++) {
+			SparkSqlConfigFields join_config = joinList.get(i);
+
+			// Check if the join config has to be executed on the basis of sequence id
+			if (!isValidSequence(join_config, sequenceId)) {
+				continue;
+			}
+
+			joinDataframes(join_config);
+		}
+
+	}
+
+	// For testing only
+	private void dumpRead(List<ReadConfigFields> read) {
+		for (int i = 0; i < read.size(); i++) {
+			ReadConfigFields read_config_fields = read.get(i);
+			String tableName = read_config_fields.getTableName();
+			String importFileFormat = read_config_fields.getImportFileFormat();
+			String importFileLocation = read_config_fields.getImportFileLocation();
+			String delim = read_config_fields.getImportDelimeter();
+			List<ColumnField> importFields = read_config_fields.getImportFields();
+			logger.info("--Read Section--");
+			logger.info("tableName: " + tableName);
+			logger.info("importFileFormat: " + importFileFormat);
+			logger.info("importFileLocation: " + importFileLocation);
+			logger.info("delim: " + delim);
+			logger.info("importFields:");
+			for (int j = 0; j < importFields.size(); j++) {
+				logger.info("  colName: " + importFields.get(j).getColName());
+				logger.info("  colType: " + importFields.get(j).getColType());
+			}
+		}
+	}
+
+	private void dumpDfMap() {
+		logger.info("Size of the dfMap: " + dfMap.size());
+		for (String key : dfMap.keySet()) {
+			logger.info("tableName: " + key + ", df: " + dfMap.get(key));
+		}
+	}
+}

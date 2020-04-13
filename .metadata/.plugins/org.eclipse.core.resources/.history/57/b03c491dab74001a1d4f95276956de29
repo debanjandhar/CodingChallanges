@@ -1,0 +1,39 @@
+package hackerrank;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
+public class CubeSummation {
+	public static void main(String[] args) throws NumberFormatException, IOException {
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		
+		int numTestCases = Integer.parseInt(br.readLine());
+		for (int i = 0; i < numTestCases; i++) {
+			String[] matrixSizeAndNumQueries = br.readLine().split(" ");
+			int matrixSize = Integer.parseInt(matrixSizeAndNumQueries[0]);
+			int numQueries = Integer.parseInt(matrixSizeAndNumQueries[1]);
+			long[][][] matrix = new long[numQueries][numQueries][numQueries]; 
+			
+			for (int j = 0; j < numQueries; j++) {
+				String[] query = br.readLine().split(" ");
+				switch (query[0]) {
+				case "UPDATE":
+					
+					break;
+				case "QUERY":
+					
+				}
+			}
+		}
+	}
+	
+	static void update(long[][][] matrix, int x, int y, int z, long val) {
+		
+	}
+
+	static long query(long[][][] matrix, int x1, int y1, int z1, int x2, int y2, int z2) {
+		return 0l;
+	}
+}
+ 

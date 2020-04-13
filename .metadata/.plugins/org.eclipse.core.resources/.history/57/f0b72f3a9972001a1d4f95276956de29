@@ -1,0 +1,70 @@
+package hackerrank;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Arrays;
+
+public class KittysCalculationsonaTree {
+
+	static void calcSumForQueries(int[][] graph, int[][] queries) {
+		for (int[] query : queries) {
+			int numElements = query.length;
+			for (int i = 0; i < numElements - 1; i++) {
+				for (int j = i + 1; j < numElements; j++) {
+
+				}
+			}
+		}
+	}
+
+	public static void main(String[] args) throws IOException {
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+
+		String[] nums = br.readLine().split(" ");
+		int numEdges = Integer.parseInt(nums[0]);
+		int numQueries = Integer.parseInt(nums[1]);
+
+		// Tree indexing starts from 1
+		int[][] graph = new int[numEdges + 1][numEdges + 1];
+		int[][] queries = new int[numQueries][];
+
+		for (int i = 0; i < numEdges - 1; i++) {
+			String[] edges = br.readLine().split(" ");
+			int node1 = Integer.parseInt(edges[0]);
+			int node2 = Integer.parseInt(edges[1]);
+
+			graph[node1][node2] = 1;
+			graph[node2][node1] = 1;
+		}
+
+		for (int i = 0; i < numQueries; i++) {
+			int numEleInQuery = Integer.parseInt(br.readLine());
+			String[] elements = br.readLine().split(" ");
+			queries[i] = new int[numEleInQuery];
+
+			for (int j = 0; j < numEleInQuery; j++) {
+				queries[i][j] = Integer.parseInt(elements[j]);
+			}
+		}
+
+//		print2DArray(graph);
+//		print2DArray(queries);
+		
+//		calcSumForQueries(graph, queries);
+	}
+
+	static void getCombinations(int[] nums) {
+		for (int i = 0; i < nums.length - 1; i++) {
+			for (int j = i + 1; j < nums.length; j++) {
+				System.out.println(nums[i] + " " + nums[j]);
+			}
+		}
+	}
+
+	static void print2DArray(int[][] input) {
+		for (int[] is : input) {
+			System.out.println(Arrays.toString(is));
+		}
+	}
+}

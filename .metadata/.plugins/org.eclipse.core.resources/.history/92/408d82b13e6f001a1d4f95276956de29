@@ -1,0 +1,64 @@
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class Waiter {
+
+	static int[] waiter(int[] number, int q) {
+		List<Integer> outputList = new ArrayList<Integer>();
+
+		return getIntArrayFromList(outputList);
+	}
+
+	private static int[] getIntArrayFromList(List<Integer> intputArr) {
+		int[] finalArr = new int[intputArr.size()];
+
+		int index = 0;
+		for (int i : finalArr) {
+			finalArr[index++] = i;
+		}
+
+		return finalArr;
+	}
+
+	private List<Integer> getNPrimeNumbers(int n) {
+		List<Integer> primeNos = new ArrayList<Integer>();
+		int start = 0;
+		
+		
+		// Calculate nth prime in chunks of 10000
+		while (primeNos.size() < n) {
+			int CHUNK_SIZE = 100000;
+			boolean[] primes = new boolean[CHUNK_SIZE];
+
+			for (int i = start; i < CHUNK_SIZE; i++) {
+				primes[i] = true;
+			}
+
+			for (int i = primeCheckStart; i * i <= CHUNK_SIZE; i++) {
+				if (primes[i] == false) {
+					for (int j = i * i; j < CHUNK_SIZE; j += i) {
+						primes[j] = false;
+					}
+				}
+			}
+
+			for (int i = primeCheckStart; i < CHUNK_SIZE; i++) {
+				if (primes[i]) {
+					primeNos.add(i);
+				}
+			}
+		}
+
+		return primeNos;
+	}
+
+	public static void main(String[] args) throws IOException {
+		int[] stackA = new int[] { 1, 2 };
+		int numQueries = 2;
+
+		System.out.println(Arrays.toString(waiter(stackA, numQueries)));
+	}
+}
+	

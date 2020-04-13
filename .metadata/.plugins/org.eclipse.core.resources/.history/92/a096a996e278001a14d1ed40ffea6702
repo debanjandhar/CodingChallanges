@@ -1,0 +1,22 @@
+package com.odc.pricemng.validation.validators;
+
+import javax.validation.ConstraintValidator;
+import javax.validation.ConstraintValidatorContext;
+
+import com.odc.pricemng.fintechpricemanagerapi.entities.RequestParams;
+import com.odc.pricemng.validation.annotations.ValidateUser;
+import com.odc.revShareAPI.daos.UsersDao;
+
+public class UserValidator implements ConstraintValidator<ValidateUser, RequestParams> {
+	
+	private UsersDao usersDao;
+	
+	@Override
+	public boolean isValid(RequestParams value, ConstraintValidatorContext context) {
+		String uKey = value.getuKey();
+		String pKey = value.getpKey();
+		
+		return false;
+	}
+
+}

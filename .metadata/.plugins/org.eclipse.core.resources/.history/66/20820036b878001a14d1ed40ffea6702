@@ -1,0 +1,52 @@
+package com.odc.pricemng.fintechpricemanagerapi.controllers;
+
+import java.util.Optional;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+public abstract class AbstractController<T> {
+	
+	protected abstract CrudRepository getRepository();
+	
+	@ApiOperation(value="Returns Active Percent Media Spend")
+	@RequestMapping(method = RequestMethod.GET, produces = { "application/json" })
+	@ResponseBody
+	public ResponseEntity<?> getMediaSpendData(@RequestHeader("uKey") String uKey,
+			@RequestHeader(value = "pKey") String pKey, @RequestHeader("application") String application,
+			@RequestHeader(value = "page", required = false) Integer page,
+			@RequestHeader(value = "pageSize", required = false) Integer pageSize,
+			@RequestHeader(value = "orderBy", required = false, defaultValue = "activeTimestamp") String orderBy,
+			@RequestHeader(value = "order", required = false, defaultValue = "desc") String order,
+			@RequestParam(value = "rowNumber") Optional<Long> rowNumber) {
+		RequestParams requestParams = new RequestParams(uKey, pKey, application);
+		requestParams.setOrderBy((StringUtils.isBlank(orderBy)) ? this.orderBy : orderBy);
+		requestParams.setOrder((StringUtils.isBlank(order)) ? this.order : order);
+		requestParams.setPage(page == null ? this.page : page);
+		requestParams.setPageSize(pageSize == null ? this.pageSize : pageSize);
+		requestParams.setSearchFor(rowNumber.isPresent() ? rowNumber.get() : null);
+		LOGGER.info("RequestParams for getMediaSpendData" + requestParams);
+		try {
+			boolean isValidUser = mediaSharesService.isValidUser(requestParams);
+			if (isValidUser) {
+				return new ResponseEntity<Slice<PercentMediaSpendVo>>(
+						mediaSharesService.getMediaSpendData(requestParams), HttpStatus.OK);
+			} else {
+				return RevShareUtil.getCustomResponse(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+			}
+		} catch (RevShareException e) {
+			return RevShareUtil.getCustomResponse(e.getMessage(), HttpStatus.valueOf(e.getCode()));
+		} catch (Exception e) {
+			return RevShareUtil.getServerErrorResponse();
+		}
+
+	}
+}

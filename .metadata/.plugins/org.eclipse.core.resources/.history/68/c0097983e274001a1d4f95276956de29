@@ -1,0 +1,16 @@
+package hackerrank;
+
+public class TruckTour {
+
+}
+
+class Stop {
+	int petrolRcvd;
+	int petrolLft;
+	int nextStop;
+	
+	public Stop(int petrolRcvd, nextStop) {
+		
+		
+	}
+}

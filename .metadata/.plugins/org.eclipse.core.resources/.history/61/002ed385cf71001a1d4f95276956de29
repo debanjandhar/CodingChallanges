@@ -1,0 +1,21 @@
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Scanner;
+
+public class SwapNodes {
+	
+    static int[][] swapNodes(int[][] indexes, int[] queries) {
+
+    }
+
+    private static final Scanner scanner = new Scanner(System.in);
+
+    public static void main(String[] args) throws IOException {
+
+    	int[][] indexes = new int[][] {{1,2},{2,3}};
+    	int[] queries = new int[][] {{1,2},{2,3}};
+    	
+        swapNodes(indexes, queries);
+    }
+}

@@ -1,0 +1,125 @@
+package hackerrank.debug;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.Queue;
+
+public class KittysCalculationsonaTree {
+
+	static void calcSumForQueries(int[][] graph, int[][] queries) {
+
+		int[][] distanceBetweenNodes = new int[graph.length][graph.length];
+		for (int[] query : queries) {
+			long sum = 0;
+			int numElements = query.length;
+			for (int i = 0; i < numElements - 1; i++) {
+				for (int j = i + 1; j < numElements; j++) {
+					int u = query[i];
+					int v = query[j];
+
+					int dist = 0;
+					boolean[] visited = new boolean[graph.length];
+					Queue<Node_kct> q = new LinkedList<Node_kct>();
+					q.add(new Node_kct(u));
+					visited[u] = true;
+
+					if (distanceBetweenNodes[u][v] != 0) {
+						dist = distanceBetweenNodes[u][v];
+					}else {
+						dist = getDistance(graph, q, v, visited);
+						distanceBetweenNodes[u][v] = dist;
+					}
+
+					sum += (u * v * dist);
+				}
+			}
+			sum = (long) (sum % (Math.pow(10, 9) + 7));
+			System.out.println(sum);
+		}
+
+	}
+
+	static int getDistance(int[][] graph, Queue<Node_kct> q, int destination, boolean[] visited) {
+		if (q.isEmpty()) {
+			return -1;
+		}
+
+		Node_kct currNode = q.remove();
+		if (currNode.value == destination) {
+			return currNode.dist;
+		}
+
+		for (int i = 1; i < graph.length; i++) {
+			if (currNode.value != i && !visited[i] && graph[currNode.value][i] == 1) {
+				visited[i] = true;
+				q.add(new Node_kct(i, currNode.dist + 1));
+			}
+		}
+
+		return getDistance(graph, q, destination, visited);
+	}
+
+	public static void main(String[] args) throws IOException {
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+
+		String[] nums = br.readLine().split(" ");
+		int numEdges = Integer.parseInt(nums[0]);
+		int numQueries = Integer.parseInt(nums[1]);
+
+		// Tree indexing starts from 1
+		int[][] graph = new int[numEdges + 1][numEdges + 1];
+		int[][] queries = new int[numQueries][];
+
+		for (int i = 0; i < numEdges - 1; i++) {
+			String[] edges = br.readLine().split(" ");
+			int node1 = Integer.parseInt(edges[0]);
+			int node2 = Integer.parseInt(edges[1]);
+
+			graph[node1][node2] = 1;
+			graph[node2][node1] = 1;
+		}
+
+		for (int i = 0; i < numQueries; i++) {
+			int numEleInQuery = Integer.parseInt(br.readLine());
+			String[] elements = br.readLine().split(" ");
+			queries[i] = new int[numEleInQuery];
+
+			for (int j = 0; j < numEleInQuery; j++) {
+				queries[i][j] = Integer.parseInt(elements[j]);
+			}
+		}
+
+//		print2DArray(graph);
+//		print2DArray(queries);
+		calcSumForQueries(graph, queries);
+	}
+
+	static void print2DArray(int[][] input) {
+		for (int[] is : input) {
+			System.out.println(Arrays.toString(is));
+		}
+	}
+}
+
+class Node_kct {
+	int value;
+	int dist;
+
+	public Node_kct(int value) {
+		this.value = value;
+		this.dist = 0;
+	}
+
+	public Node_kct(int value, int distance) {
+		this.value = value;
+		this.dist = distance;
+	}
+
+	@Override
+	public String toString() {
+		return value + " : " + dist;
+	}
+}

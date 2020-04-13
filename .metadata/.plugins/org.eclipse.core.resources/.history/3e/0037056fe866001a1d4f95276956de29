@@ -1,0 +1,42 @@
+import java.io.IOException;
+import java.util.Scanner;
+
+public class Encryption {
+
+	// Complete the encryption function below.
+	static String encryption(String s) {
+		StringBuilder sb = new StringBuilder();
+
+		// Number of spaces will be one less than number of words in the sentence.
+		int numSpaces = s.split(" ").length - 1;
+
+		int rows = Integer.valueOf(String.valueOf(Math.floor(Math.sqrt(numSpaces))));
+		int columns = Integer.valueOf(String.valueOf(Math.ceil(Math.sqrt(numSpaces))));
+		
+		char[][] encodeMsg = new char[rows][columns];
+		
+		int index = 0, currRow = 0, currCol=0;
+		while(index != s.length()) {
+			char c = s.charAt(index++);
+			encodeMsg[currRow][currCol++] = c;
+			
+			currRow = currCol != columns-1 ? currRow : currRow++;  
+			currCol%=columns;
+		}
+		
+		for (int column = 0; column < columns; column++) {
+			for (int row = 0; row < rows; row++) {
+				sb.append(encodeMsg[column][row]);
+			}
+			sb.append(" ");
+		}
+		
+		return sb.toString();
+	}
+
+
+	public static void main(String[] args) throws IOException {
+
+		System.out.println(encryption(""));
+	}
+}

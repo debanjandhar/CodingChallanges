@@ -1,0 +1,116 @@
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.Queue;
+
+public class SwapNodes {
+
+	static int[][] swapNodes(int[][] indexes, int[] queries) {
+		int[][] output = new int[queries.length][];
+
+		Node_sn head = prepareTree(indexes);
+
+		for (int height : queries) {
+			Queue<Node_sn> q = new LinkedList<Node_sn>();
+			q.add(head);
+
+			while (!q.isEmpty()) {
+				Node_sn currNode = q.remove();
+				if (currNode.height % height == 0) {
+					// swap nodes
+					
+				}
+
+				if (currNode.left != null) {
+					q.add(currNode.left);
+				}
+				if (currNode.right != null) {
+					q.add(currNode.right);
+				}
+			}
+		}
+
+		return output;
+	}
+
+	private static Node_sn prepareTree(int[][] indexes) {
+		int numNodes = 1, height = 1;
+		Node_sn head = new Node_sn(1);
+		Queue<Node_sn> q = new LinkedList<Node_sn>();
+		q.add(head);
+
+		head.height = height;
+
+		Node_sn tmp = null;
+
+		for (int i = 0; i < indexes.length; i++) {
+			tmp = q.remove();
+
+			int left = indexes[i][0];
+			int right = indexes[i][1];
+			// We are adding 2 nodes in each iteration. Considering null nodes as well.
+			numNodes += 2;
+			height = (int) (Math.log10((double) numNodes) / Math.log10(2)) + 1;
+
+			if (left == -1) {
+				tmp.left = null;
+			} else {
+				tmp.left = new Node_sn(left);
+				tmp.left.height = height;
+				q.add(tmp.left);
+			}
+
+			if (right == -1) {
+				tmp.right = null;
+			} else {
+				tmp.right = new Node_sn(right);
+				tmp.right.height = height;
+				q.add(tmp.right);
+			}
+
+		}
+
+		return head;
+	}
+
+	private static void printTree(Node_sn head) {
+		Node_sn tmp = head;
+		Queue<Node_sn> q = new LinkedList<Node_sn>();
+		q.add(tmp);
+		System.out.println("Root : " + tmp.data + " at height " + tmp.height);
+		while (!q.isEmpty()) {
+			tmp = q.remove();
+			if (tmp.left != null) {
+				System.out.println("Left of " + tmp.data + " is " + tmp.left.data + " at height " + tmp.left.height);
+				q.add(tmp.left);
+			}
+			if (tmp.right != null) {
+				System.out.println("Right of " + tmp.data + " is " + tmp.right.data + " at height " + tmp.right.height);
+				q.add(tmp.right);
+			}
+		}
+	}
+
+	public static void main(String[] args) throws IOException {
+
+		int[][] indexes = new int[][] { { 2, 3 }, { 4, -1 }, { 5, -1 }, { 6, -1 }, { 7, 8 }, { -1, 9 }, { -1, -1 },
+				{ 10, 11 }, { -1, -1 }, { -1, -1 }, { -1, -1 } };
+		int[] queries = new int[] { 2, 3 };
+
+		swapNodes(indexes, queries);
+
+//		printTree(prepareTree(indexes));
+	}
+}
+
+class Node_sn {
+	int data;
+	int height;
+	Node_sn left;
+	Node_sn right;
+
+	public Node_sn(int data) {
+		this.data = data;
+		this.left = null;
+		this.right = null;
+	}
+}

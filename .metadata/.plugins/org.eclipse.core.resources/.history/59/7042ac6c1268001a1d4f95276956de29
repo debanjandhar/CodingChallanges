@@ -1,0 +1,32 @@
+import java.io.IOException;
+
+public class TheTimeinWords {
+
+	// Complete the timeInWords function below.
+	static String timeInWords(int h, int m) {
+		StringBuilder outputStr = new StringBuilder();
+
+		
+		
+		return outputStr.toString();
+	}
+
+	private void getHoursInWords(int h) {
+		switch (h) {
+		case 1:
+			return "one";
+
+		default:
+			break;
+		}
+	}
+	
+	private void getMinutesInWords() {
+		
+	}
+	
+	public static void main(String[] args) throws IOException {
+
+		System.out.println(timeInWords(5, 27));
+	}
+}

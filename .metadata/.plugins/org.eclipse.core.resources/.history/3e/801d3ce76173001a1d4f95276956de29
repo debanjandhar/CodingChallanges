@@ -1,0 +1,29 @@
+package projecteuler;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
+public class N1 {
+	private static long multipleSum(int n) {
+		long n3 = (int)n/3;
+		long n5 = (int)n/5;
+		long n15 = (int)n/15;
+		
+
+		return sum;
+	}
+	
+		// TODO Auto-generated method stub
+
+	}
+
+	public static void main(String[] args) throws NumberFormatException, IOException {
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		int t = Integer.parseInt(br.readLine());
+		for (int a0 = 0; a0 < t; a0++) {
+			int n = Integer.parseInt(br.readLine());
+			System.out.println(multipleSum(n));
+		}
+	}
+}

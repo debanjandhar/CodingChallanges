@@ -1,0 +1,63 @@
+import java.io.IOException;
+
+/**
+ * @author debanjandhar
+ * 
+ *         Question :
+ *         https://www.hackerrank.com/challenges/bigger-is-greater/problem
+ *
+ */
+public class BiggerisGreater {
+
+	// Complete the biggerIsGreater function below.
+	static String biggerIsGreater(String w) {
+		StringBuilder returnString = new StringBuilder();
+		String noAnswer = "no answer";
+		int[] charInts = new int[w.length()];
+
+		for (int i = 0; i < w.length(); i++) {
+			charInts[i] = w.charAt(i);
+		}
+
+		int pivot = w.length() - 1;
+		int comparisonIndex = pivot - 1;
+		boolean haveSwapped = false;
+		while (!haveSwapped) {
+			if (charInts[pivot] > charInts[comparisonIndex]) {
+				int temp = charInts[pivot];
+				charInts[pivot] = charInts[comparisonIndex];
+				charInts[comparisonIndex] = temp;
+				haveSwapped = true;
+			} else {
+				comparisonIndex--;
+
+				// Compared all the elements in front of pivot. Change the pivot.
+				if (comparisonIndex < 0) {
+					pivot--;
+					comparisonIndex = pivot - 1;
+				}
+			}
+
+			if (pivot == 0) {
+				return noAnswer;
+			}
+		}
+
+		return returnString.toString();
+	}
+
+	private void sortStrngs(int[] inputArr, int startIndex, int endIndex) {
+		for (int i = startIndex; i <= endIndex; i++) {
+			for (int j = i+1; j <= endIndex; j++) {
+				if (inputArr[i] > inputArr[j]) {
+					int temp = inputArr[i]; 
+				}
+			}
+		}
+	}
+
+	public static void main(String[] args) throws IOException {
+
+		System.out.println(biggerIsGreater(""));
+	}
+}

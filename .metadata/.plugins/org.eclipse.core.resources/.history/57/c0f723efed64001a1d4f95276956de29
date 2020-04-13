@@ -1,0 +1,28 @@
+import java.io.IOException;
+import java.util.Scanner;
+
+public class ClimbingLeaderboard {
+
+    // Complete the climbingLeaderboard function below.
+    static int[] climbingLeaderboard(int[] scores, int[] alice) {
+    	int [] ranks  = new int[alice.length];
+    	
+    	
+    	
+    	
+    	return ranks;
+    }
+    
+    private void binarySearch() {
+		// TODO Auto-generated method stub
+
+	}
+
+    private static final Scanner scanner = new Scanner(System.in);
+
+    public static void main(String[] args) throws IOException {
+        int[] result = climbingLeaderboard(new int [] {}, new int[] {});
+        
+        System.out.println(result);
+    }
+}

@@ -1,0 +1,22 @@
+package com.odc.pricemng.exception;
+
+public class PriceManagerException extends APIException{
+
+//	public PriceManagerException(APIErrorCode errorCode) {
+//		super(errorCode);
+//	}
+	
+//	public PriceManagerException(APIErrorCode errorCode, Throwable e) {
+//		super(errorCode, e);
+//	}
+
+	public PriceManagerException(String errorMsg) {
+		super(errorMsg);
+	}
+
+	@Override
+	public String handleException() {
+		return getMessage();
+	}
+
+}

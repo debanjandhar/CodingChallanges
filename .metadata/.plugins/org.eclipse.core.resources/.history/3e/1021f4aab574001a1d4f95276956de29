@@ -1,0 +1,38 @@
+package hackerrank;
+
+import java.util.Stack;
+
+public class JimAndSkyscrapers {
+
+	static int solve(int[] arr) {
+		Stack<Integer> stack = new Stack<Integer>();
+		int count = 0;
+		for (int i : arr) {
+			if (stack.isEmpty() || i < stack.peek()) {
+				stack.push(i);
+			} else {
+				// Pop all elements smaller than
+				while (i > stack.peek()) {
+					stack.pop();
+				}
+
+				// Now stack head is equal to the current number
+				Stack<Integer> tmp = new Stack<Integer>();
+				tmp.addAll(stack);
+				while (tmp.peek() == i) {
+					count++;
+					tmp.pop();
+				}
+				stack.push(i);
+			}
+		}
+
+		return count * 2;
+	}
+
+	public static void main(String[] args) {
+		int[] arr = new int[] { 3, 2, 1, 2, 3, 3 };
+
+		System.out.println(solve(arr));
+	}
+}

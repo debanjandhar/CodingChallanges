@@ -1,0 +1,70 @@
+import java.io.IOException;
+
+public class TheTimeinWords {
+
+	// Complete the timeInWords function below.
+	static String timeInWords(int h, int m) {
+		StringBuilder outputStr = new StringBuilder();
+
+		
+		
+		return outputStr.toString();
+	}
+
+	private static String getHoursInWords(int h) {
+		switch (h) {
+		case 1:
+			return "one";
+		case 2:
+			return "two";
+		case 3:
+			return "three";
+		case 4:
+			return "four";
+		case 5:
+			return "five";
+		case 6:
+			return "six";
+		case 7:
+			return "seven";
+		case 8:
+			return "eight";
+		case 9:
+			return "nine";
+		case 10:
+			return "ten";
+		case 11:
+			return "eleven";
+		case 12:
+			return "twelve";
+		default:
+			return "Error";
+		}
+	}
+	
+	private static String getMinutesInWords(int m) {
+		int tens = m/10;
+		int ones = m%10;
+		
+		return 
+	}
+	
+	private static String getTensinWords(int t) {
+		switch (t) {
+		case 1:
+			return "ten";
+		case 2:
+			return "ten";
+		case 1:
+			return "ten";
+
+		default:
+			break;
+		}
+	}
+	
+	public static void main(String[] args) throws IOException {
+
+		System.out.println(timeInWords(5, 27));
+	}
+}

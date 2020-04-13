@@ -1,0 +1,44 @@
+import java.io.IOException;
+
+public class DownToZeroII {
+
+	/*
+	 * Complete the downToZero function below.
+	 */
+	static int downToZero(int n) {
+		int minMoves = 0;
+
+		while (n != 0) {
+			int divisor = isPrime(n);
+			if (divisor == n) {
+				// It's a prime number
+				n--;
+			} else {
+				n = n / divisor;
+			}
+			minMoves++;
+		}
+
+		return minMoves;
+	}
+
+	private static int isPrime(int n) {
+		int minDiv1 = Integer.MAX_VALUE;
+		int minDiv2 = Integer.MAX_VALUE;
+		int min = Integer.MIN_VALUE;
+		
+		for (int i = 2; i <= n / 2; i++) {
+			if (n % i == 0 && ((n/1)-i>=0)) {
+				
+				return i;
+			}
+		}
+
+		return n;
+	}
+
+	public static void main(String[] args) throws IOException {
+
+		System.out.println(downToZero(966514));
+	}
+}
