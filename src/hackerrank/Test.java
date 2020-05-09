@@ -1,14 +1,12 @@
 package hackerrank;
 
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
 
 public class Test {
 	public static void main(String[] args) throws ParseException {
-		
+		int num = 1;
+		for (int i = 0; i < 100; i++) {
+			System.out.println(num << i);
+		}
 	}
 }
